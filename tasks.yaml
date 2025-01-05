@@ -1,0 +1,41 @@
+scrape_linkedin_posts:
+  description: >
+    Collect the most popular posts from the user's LinkedIn feed related to topics such as LLM, GenAI, and other relevant fields. Scrape data or use LinkedIn API where possible.
+  expected_output: >
+    A structured dataset containing posts, engagement metrics, and associated topics.
+
+analyze_engagement:
+  description: >
+    Evaluate the engagement metrics of LinkedIn posts collected, focusing on reactions, comments, and shares to prioritize topics for further analysis.
+  expected_output: >
+    An analysis report with ranked topics and detailed engagement breakdowns.
+
+generate_ideas:
+  description: >
+    Use engagement data to brainstorm and recommend the most promising topics for content creation. Collaborate with LLMs to refine suggestions.
+  expected_output: >
+    A curated list of top-performing topics with creative insights for content strategy.
+
+conduct_web_search:
+  description: >
+    Perform a detailed web search to find blogs, articles, and research papers relevant to the chosen topic. Utilize tools like Google Serper and ArXiv.
+  expected_output: >
+    A structured list of references, categorized by source type, relevance, and reliability.
+
+create_post:
+  description: >
+    Summarize insights and references to create a professional LinkedIn post, incorporating multimedia elements where applicable.
+  expected_output: >
+    A well-written LinkedIn post with relevant images or graphics, ready for review and sharing.
+
+notify_user:
+  description: >
+    Notify the user with the draft LinkedIn post, allowing for feedback and approval. Facilitate a regeneration process if necessary.
+  expected_output: >
+    A finalized LinkedIn post approved by the user or flagged for content adjustments.
+
+publish_post:
+  description: >
+    Share the approved LinkedIn post on the user's profile with appropriate formatting and timing.
+  expected_output: >
+    A successfully published LinkedIn post with optimized reach and engagement.
