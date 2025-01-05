@@ -1,0 +1,7 @@
+crewai
+crewai_tools
+beautifulsoup4
+requests
+flask
+pymongo
+python-dotenv
