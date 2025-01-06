@@ -91,7 +91,60 @@ class CustomLinkedInAgent(Agent):
             logger.error(f"Login failed: {str(e)}")
             raise RuntimeError(f"Login failed: {str(e)}")
 
+    def _parse_count(self, count_text):
+        """Parse a count string (e.g., '1.2K', '3M') into an integer."""
+        if not count_text:
+            return 0
+            
+        try:
+            match = re.search(r'([\d,.]+)([KkMm])?', count_text)
+            if not match:
+                return 0
+                
+            number = match.group(1).replace(',', '')
+            suffix = match.group(2).lower() if match.group(2) else ''
+            
+            value = float(number)
+            if suffix == 'k':
+                value *= 1000
+            elif suffix == 'm':
+                value *= 1000000
+                
+            return int(value)
+            
+        except Exception:
+            return 0
+
+    def _extract_metrics(self, post):
+        """Extract engagement metrics from a post."""
+        metrics = {'reactions': 0, 'comments': 0, 'shares': 0}
+        try:
+            # Get reactions count
+            reactions_button = post.find_element(By.CSS_SELECTOR, "button[data-reaction-details]")
+            reactions_text = reactions_button.get_attribute("aria-label")
+            metrics['reactions'] = self._parse_count(reactions_text)
+
+            # Get comments and shares
+            social_counts = post.find_elements(By.CSS_SELECTOR, ".social-details-social-counts__item")
+            for count in social_counts:
+                text = count.text.lower()
+                if 'comments' in text:
+                    metrics['comments'] = self._parse_count(text)
+                elif 'reposts' in text:
+                    metrics['shares'] = self._parse_count(text)
+
+        except Exception as e:
+            logger.debug(f"Error extracting metrics: {str(e)}")
+        return metrics
+
+    def _extract_linked_url(self, post):
+        try:
+            return post.find_element(By.CSS_SELECTOR, ".feed-shared-actor__container a").get_attribute("href")
+        except NoSuchElementException:
+            return None
+
     def _scrape_feed(self, driver, max_posts):
+        """Scrape the LinkedIn feed for relevant posts."""
         posts_data = []
         processed_posts = set()
         scroll_attempts = 0
@@ -102,6 +155,10 @@ class CustomLinkedInAgent(Agent):
             
             for post in posts:
                 try:
+                    # Scroll the post into view and wait for dynamic content
+                    driver.execute_script("arguments[0].scrollIntoView(true);", post)
+                    time.sleep(1)  # Wait for metrics to load
+                    
                     text = self._extract_post_text(post)
                     if not text or hash(text) in processed_posts:
                         continue
@@ -116,11 +173,12 @@ class CustomLinkedInAgent(Agent):
                             "linked_url": self._extract_linked_url(post),
                             "scraped_at": datetime.now().isoformat(),
                             "is_ai_related": True,
-                            "matched_ai_topics": self._get_matched_topics(text)
+                            "matched_ai_topics": [topic for topic in self.ai_topics if topic.lower() in text.lower()]
                         }
                         
                         processed_posts.add(hash(text))
                         posts_data.append(post_data)
+                        logger.info(f"Saved AI post {len(posts_data)} of {max_posts}")
                         
                         if len(posts_data) >= max_posts:
                             break
@@ -129,22 +187,20 @@ class CustomLinkedInAgent(Agent):
                     logger.warning(f"Error processing post: {str(e)}")
                     continue
             
+            # Scroll and wait for new content
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)
             scroll_attempts += 1
             
         return posts_data
 
-    def _is_relevant_topic(self, text):
-        return any(topic.lower() in text.lower() for topic in self.ai_topics)
-
-    def _get_matched_topics(self, text):
-        return [topic for topic in self.ai_topics if topic.lower() in text.lower()]
-
     def _extract_post_text(self, post):
         try:
-            return post.find_element(By.CSS_SELECTOR, ".break-words span[dir='ltr']").text.strip()
-        except NoSuchElementException:
+            text_elements = post.find_elements(By.CSS_SELECTOR, ".break-words span[dir='ltr']")
+            text_content = ' '.join([elem.text for elem in text_elements if elem.text])
+            return text_content.strip()
+        except Exception as e:
+            logger.debug(f"Error extracting post text: {str(e)}")
             return ""
 
     def _extract_post_id(self, post):
@@ -155,42 +211,9 @@ class CustomLinkedInAgent(Agent):
         except Exception:
             return None
 
-    def _extract_metrics(self, post):
-        try:
-            metrics = {
-                "reactions": 0,
-                "comments": 0,
-                "shares": 0
-            }
-            
-            try:
-                reactions = post.find_element(By.CSS_SELECTOR, ".social-details-social-counts__reactions-count")
-                metrics["reactions"] = int(reactions.text)
-            except NoSuchElementException:
-                pass
-
-            try:
-                comments = post.find_element(By.CSS_SELECTOR, ".social-details-social-counts__comments")
-                metrics["comments"] = int(comments.text)
-            except NoSuchElementException:
-                pass
-
-            try:
-                shares = post.find_element(By.CSS_SELECTOR, ".social-details-social-counts__shares")
-                metrics["shares"] = int(shares.text)
-            except NoSuchElementException:
-                pass
-
-            return metrics
-            
-        except Exception:
-            return {"reactions": 0, "comments": 0, "shares": 0}
-
-    def _extract_linked_url(self, post):
-        try:
-            return post.find_element(By.CSS_SELECTOR, ".feed-shared-actor__container a").get_attribute("href")
-        except NoSuchElementException:
-            return None
+    def _is_relevant_topic(self, text):
+        text_lower = text.lower()
+        return any(topic in text_lower for topic in self.ai_topics)
 
 @CrewBase
 class LinkedInScrapeAgent:
