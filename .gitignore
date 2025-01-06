@@ -47,3 +47,6 @@ dist/
 *.tmp
 *.out
 *.lock
+
+data/output
+tests/

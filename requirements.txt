@@ -5,3 +5,8 @@ requests
 flask
 pymongo
 python-dotenv
+undetected-chromedriver
+selenium
+pandas
+loguru
+webdriver-manager
