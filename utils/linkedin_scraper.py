@@ -206,52 +206,62 @@ class LinkedInFeedScraper:
         }
    
    def scrape_feed(self, max_posts=100, days_limit=4, timeout_seconds=120):
-       posts_data = []
-       processed_ids = set()
-       start_time = time.time()
-       last_post_time = start_time
-       
-       logger.info("Starting scrape")
-       
-       try:
-           while len(posts_data) < max_posts:
-               if time.time() - last_post_time > timeout_seconds:
-                   logger.warning(f"Timeout after {timeout_seconds}s without new posts")
-                   break
-                   
-               posts = self.driver.find_elements(By.CSS_SELECTOR, ".feed-shared-update-v2")
-               
-               for post in posts:
-                   try:
-                       text = self.extract_post_text(post)
-                       if not text:
-                           continue
-                           
-                       print(f"\nFound post text: {text[:200]}...")
-                       is_ai_related = self.is_relevant_topic(text)
-                       
-                       if is_ai_related:
-                           print(f"AI-related post found!")
-                       
-                       post_data = self.process_post_data(post, text, is_ai_related)
-                       
-                       if post_data['is_ai_related']:
-                           posts_data.append(post_data)
-                           last_post_time = time.time()
-                           logger.info(f"Saved AI post {len(posts_data)} of {max_posts}")
-                           
-                   except Exception as e:
-                       logger.debug(f"Error processing post: {e}")
-                       continue
-                       
-               self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-               time.sleep(Config.SCROLL_PAUSE_TIME)
-               
-       except Exception as e:
-           logger.error(f"Scraping error: {e}")
-       finally:
-           logger.info(f"Completed in {time.time() - start_time:.2f}s. Found {len(posts_data)} AI posts")
-           return posts_data
+        """Scrape LinkedIn feed for AI-related posts."""
+        posts_data = []
+        processed_texts = set()  # Track unique post texts
+        start_time = time.time()
+        last_post_time = start_time
+        
+        logger.info("Starting scrape")
+        
+        try:
+            while len(posts_data) < max_posts:
+                # Check timeout
+                if time.time() - last_post_time > timeout_seconds:
+                    logger.warning(f"Timeout after {timeout_seconds}s without new posts")
+                    break
+                    
+                posts = self.driver.find_elements(By.CSS_SELECTOR, ".feed-shared-update-v2")
+                
+                for post in posts:
+                    try:
+                        # Extract and validate text
+                        text = self.extract_post_text(post)
+                        if not text or text in processed_texts:
+                            continue
+                            
+                        print(f"\nFound post text: {text[:200]}...")
+                        is_ai_related = self.is_relevant_topic(text)
+                        
+                        if is_ai_related:
+                            print(f"AI-related post found!")
+                            processed_texts.add(text)  # Add to processed set
+                            post_data = self.process_post_data(post, text, is_ai_related)
+                            
+                            if post_data['is_ai_related']:
+                                posts_data.append(post_data)
+                                last_post_time = time.time()
+                                logger.info(f"Saved AI post {len(posts_data)} of {max_posts}")
+                                
+                                # Check if we've reached the limit
+                                if len(posts_data) >= max_posts:
+                                    logger.info(f"Reached maximum posts limit: {max_posts}")
+                                    return posts_data
+                                
+                    except Exception as e:
+                        logger.debug(f"Error processing post: {e}")
+                        continue
+                        
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(Config.SCROLL_PAUSE_TIME)
+                
+        except TimeoutException:
+            logger.warning(f"Operation timed out after {timeout_seconds} seconds")
+        except Exception as e:
+            logger.error(f"Scraping error: {e}")
+        finally:
+            logger.info(f"Completed in {time.time() - start_time:.2f}s. Found {len(posts_data)} AI posts")
+            return posts_data
            
    def close(self):
        if self.driver:
@@ -259,15 +269,14 @@ class LinkedInFeedScraper:
            logger.info("Browser closed successfully")
            
    def run(self, max_posts=100):
-       try:
-           self.setup_driver()
-           if self.login():
-               return self.scrape_feed(max_posts=max_posts)
-           return []
-           
-       except Exception as e:
-           logger.error(f"Scraping failed: {str(e)}")
-           return []
-           
-       finally:
-           self.close()
+        """Execute the complete scraping workflow."""
+        try:
+            self.setup_driver()
+            if self.login():
+                posts = self.scrape_feed(max_posts=max_posts)
+                return posts[:max_posts]  # Ensure we don't return more than max_posts
+        except Exception as e:
+            logger.error(f"Scraping failed: {str(e)}")
+            return []
+        finally:
+            self.close()
