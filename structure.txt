@@ -10,17 +10,19 @@
 │   ├── share_agent.py
 │   ├── tasks.yaml
 │   └── web_search_agent.py
+├── agents.yaml
 ├── config
 │   └── settings.py
 ├── data
 │   └── output
-│       ├── linkedin_posts_20250106_022009.json
-│       └── linkedin_posts_20250106_133104.json
+├── db
+│   └── bb4ebc94-eb65-4d84-b2ea-1374d178cd1f
 ├── logs
 │   └── scraper.log
 ├── main.py
 ├── requirements.txt
 ├── structure.txt
+├── tasks.yaml
 ├── tests
 │   └── test_undetected_chromedriver.py
 └── utils
@@ -30,4 +32,4 @@
     ├── models.py
     └── webdriver_tool.py
 
-8 directories, 23 files
+10 directories, 23 files
