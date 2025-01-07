@@ -3,6 +3,7 @@ import yaml
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 from utils.webdriver_tool import WebDriverTool
+from utils.linkedin_scrape_tool import LinkedInScrapeTool
 from utils.logger import logger
 from config.settings import Config
 import ssl
@@ -30,13 +31,13 @@ def main():
         configs = load_yaml_configs()
         
         # Initialize tools
-        webdriver_tool = WebDriverTool()
+        linkedin_tool = LinkedInScrapeTool()
         serper_tool = SerperDevTool()
         
         # Create agents with their respective tools and LLMs
         linkedin_scrape_agent = Agent(
             config=configs['agents']['linkedin_scrape_agent'],
-            tools=[webdriver_tool],
+            tools=[linkedin_tool],
             llm="gpt-4",  # Using GPT-4 for complex pattern recognition
             verbose=True
         )

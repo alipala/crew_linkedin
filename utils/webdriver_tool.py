@@ -52,3 +52,8 @@ class WebDriverTool(BaseTool):
                 pass
             finally:
                 self.driver = None
+
+    def __del__(self):
+        """Cleanup method to ensure resources are properly closed"""
+        if hasattr(self, 'driver') and self.driver:
+            self.driver.quit()
