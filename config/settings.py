@@ -8,6 +8,7 @@ class Config:
     # LinkedIn credentials
     LINKEDIN_EMAIL = os.getenv('LINKEDIN_EMAIL', 'default_email@example.com')
     LINKEDIN_PASSWORD = os.getenv('LINKEDIN_PASSWORD', 'default_password')
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     
     # Scraping settings
     MAX_POSTS = 100
