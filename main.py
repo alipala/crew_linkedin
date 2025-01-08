@@ -4,6 +4,7 @@ from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 from utils.webdriver_tool import WebDriverTool
 from utils.linkedin_scrape_tool import LinkedInScrapeTool
+from utils.post_create_agent import PostCreateAgent
 from utils.logger import logger
 from config.settings import Config
 import ssl
@@ -60,6 +61,12 @@ def main():
             llm="gpt-3.5-turbo",  # Using GPT-3.5 for simpler search tasks
             verbose=True
         )
+
+        post_create_agent = PostCreateAgent(
+            config=configs['agents']['post_create_agent'],
+            llm="gpt-4",
+            verbose=True
+        )
         
         # Create tasks
         scrape_task = Task(
@@ -84,6 +91,12 @@ def main():
             agent=web_search_agent,
             context=[brainstorm_task]
         )
+
+        create_post_task = Task(
+            config=configs['tasks']['create_post'],
+            agent=post_create_agent,
+            context=[web_search_task]
+        )
         
         # Create crew
         crew = Crew(
@@ -91,13 +104,15 @@ def main():
                 linkedin_scrape_agent,
                 linkedin_analyze_agent,
                 brainstorm_agent,
-                web_search_agent
+                web_search_agent,
+                post_create_agent
             ],
             tasks=[
                 scrape_task,
                 analyze_task,
                 brainstorm_task,
-                web_search_task
+                web_search_task,
+                create_post_task
             ],
             verbose=True,
             process=Process.sequential
