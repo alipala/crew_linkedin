@@ -8,9 +8,6 @@ class Config:
     # LinkedIn credentials
     LINKEDIN_EMAIL = os.getenv('LINKEDIN_EMAIL', 'default_email@example.com')
     LINKEDIN_PASSWORD = os.getenv('LINKEDIN_PASSWORD', 'default_password')
-
-    print(f"Config.LINKEDIN_EMAIL: {LINKEDIN_EMAIL}")
-    print(f"Config.LINKEDIN_PASSWORD: {LINKEDIN_PASSWORD}")
     
     # Scraping settings
     MAX_POSTS = 100

@@ -1,36 +1,116 @@
-from agents.linkedin_scrape_agent import LinkedInScrapeAgent
-from crewai import Task
+import os
+import yaml
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import SerperDevTool
+from utils.webdriver_tool import WebDriverTool
+from utils.linkedin_scrape_tool import LinkedInScrapeTool
 from utils.logger import logger
+from config.settings import Config
 import ssl
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
+def load_yaml_configs():
+    """Load configurations from YAML files."""
+    files = {
+        'agents': 'agents/agents.yaml',
+        'tasks': 'agents/tasks.yaml'
+    }
+    
+    configs = {}
+    for config_type, file_path in files.items():
+        with open(file_path, 'r') as file:
+            configs[config_type] = yaml.safe_load(file)
+    return configs
+
 def main():
     try:
-        logger.info("Initializing LinkedInScrapeAgent as a CrewAI agent...")
-        agent_crew = LinkedInScrapeAgent()
-        agent = agent_crew.linkedin_agent()
-
-        logger.info("Creating task for scraping LinkedIn posts...")
-        task = Task(
-            description="Scrape LinkedIn posts related to AI topics and save the most engaging ones. Max posts: 10",
-            expected_output="A collection of relevant LinkedIn posts with engagement metrics",
-            agent=agent,
-            context=None  # Optional: context from other tasks if needed
+        logger.info("Initializing LinkedIn Content Generation Pipeline...")
+        
+        # Load configurations
+        configs = load_yaml_configs()
+        
+        # Initialize tools
+        linkedin_tool = LinkedInScrapeTool()
+        serper_tool = SerperDevTool()
+        
+        # Create agents with their respective tools and LLMs
+        linkedin_scrape_agent = Agent(
+            config=configs['agents']['linkedin_scrape_agent'],
+            tools=[linkedin_tool],
+            llm="gpt-4",  # Using GPT-4 for complex pattern recognition
+            verbose=True
         )
-
-        logger.info("Executing the LinkedIn scraping task...")
-        output = agent.execute(task)
-
-        if output.get("posts"):
-            logger.success(f"Scraping completed successfully. Total posts scraped: {len(output['posts'])}.")
-        else:
-            logger.warning("No posts were scraped.")
-            
+        
+        linkedin_analyze_agent = Agent(
+            config=configs['agents']['linkedin_interaction_analyze_agent'],
+            llm="gpt-4",  # Using GPT-4 for analysis
+            verbose=True
+        )
+        
+        brainstorm_agent = Agent(
+            config=configs['agents']['brainstorm_agent'],
+            llm="gpt-4",  # Using GPT-4 for creative tasks
+            verbose=True
+        )
+        
+        web_search_agent = Agent(
+            config=configs['agents']['web_search_agent'],
+            tools=[serper_tool],
+            llm="gpt-3.5-turbo",  # Using GPT-3.5 for simpler search tasks
+            verbose=True
+        )
+        
+        # Create tasks
+        scrape_task = Task(
+            config=configs['tasks']['scrape_linkedin_posts'],
+            agent=linkedin_scrape_agent
+        )
+        
+        analyze_task = Task(
+            config=configs['tasks']['analyze_engagement'],
+            agent=linkedin_analyze_agent,
+            context=[scrape_task]
+        )
+        
+        brainstorm_task = Task(
+            config=configs['tasks']['generate_ideas'],
+            agent=brainstorm_agent,
+            context=[analyze_task]
+        )
+        
+        web_search_task = Task(
+            config=configs['tasks']['conduct_web_search'],
+            agent=web_search_agent,
+            context=[brainstorm_task]
+        )
+        
+        # Create crew
+        crew = Crew(
+            agents=[
+                linkedin_scrape_agent,
+                linkedin_analyze_agent,
+                brainstorm_agent,
+                web_search_agent
+            ],
+            tasks=[
+                scrape_task,
+                analyze_task,
+                brainstorm_task,
+                web_search_task
+            ],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        # Kickoff the crew
+        result = crew.kickoff()
+        logger.info("LinkedIn content generation process completed successfully")
+        return result
+        
     except Exception as e:
-        logger.error(f"An error occurred during the scraping process: {str(e)}")
-    finally:
-        logger.info("LinkedIn scraping process finished.")
+        logger.error(f"An error occurred during the process: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     main()
