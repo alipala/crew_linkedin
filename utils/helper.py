@@ -45,7 +45,8 @@ def save_posts_to_json(posts: List[Dict], filename: Optional[str] = None) -> str
         # Save posts with proper formatting
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(unique_posts_list, f, indent=2, ensure_ascii=False)
-
+            logger.debug(f"File {filepath} opened for writing.")
+        
         logger.info(f"Successfully saved {len(unique_posts_list)} posts to {filepath}")
         return filepath
 
@@ -61,6 +62,7 @@ def load_posts_from_json(filepath: str) -> List[Dict]:
             return []
 
         with open(filepath, 'r', encoding='utf-8') as f:
+            logger.debug(f"File {filepath} opened for reading.")
             posts = json.load(f)
 
         logger.info(f"Successfully loaded {len(posts)} posts from {filepath}")
@@ -69,3 +71,4 @@ def load_posts_from_json(filepath: str) -> List[Dict]:
     except Exception as e:
         logger.error(f"Error loading posts from JSON: {str(e)}")
         return []
+

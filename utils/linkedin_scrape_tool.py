@@ -18,6 +18,7 @@ class LinkedInScrapeTool(BaseTool):
     @contextmanager
     def _get_scraper(self):
         """Context manager for handling scraper lifecycle."""
+        scraper = None
         try:
             scraper = LinkedInFeedScraper(
                 email=os.getenv("LINKEDIN_EMAIL"),
@@ -26,7 +27,11 @@ class LinkedInScrapeTool(BaseTool):
             yield scraper
         finally:
             if scraper:
-                scraper.close()
+                try:
+                    scraper.close()
+                    logger.info("Scraper closed successfully.")
+                except Exception as close_error:
+                    logger.warning(f"Error while closing scraper: {close_error}")
     
     def _save_posts_to_json(self, posts: list) -> str:
         """Save posts to JSON file with timestamp."""
@@ -36,6 +41,7 @@ class LinkedInScrapeTool(BaseTool):
         
         os.makedirs(os.path.join("data", "output"), exist_ok=True)
         
+        # Ensure file is closed after writing
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
             logger.info(f"Posts saved to {filepath}")

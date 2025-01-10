@@ -50,3 +50,5 @@ dist/
 
 data/output
 tests/
+notification_status.json
+structure.txt

@@ -279,4 +279,6 @@ class LinkedInFeedScraper:
             logger.error(f"Scraping failed: {str(e)}")
             return []
         finally:
-            self.close()
+            if self.driver:
+                self.driver.quit()
+                logger.info("Browser driver closed.")
