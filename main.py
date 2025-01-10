@@ -16,8 +16,8 @@ ssl._create_default_https_context = ssl._create_unverified_context
 def load_yaml_configs():
     """Load configurations from YAML files."""
     files = {
-        'agents': 'agents/agents.yaml',
-        'tasks': 'agents/tasks.yaml'
+        'agents': 'config/agents.yaml',
+        'tasks': 'config/tasks.yaml'
     }
 
     configs = {}
