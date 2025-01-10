@@ -1,15 +1,18 @@
+# logger.py
 from loguru import logger
 import sys
 from pathlib import Path
 from config.settings import Config
 
 def setup_logger():
-    logger.remove()
+    """Setup logger with dual logging: console and file."""
+    logger.remove()  # Remove default handlers
     
+    # Ensure log directory exists
     log_dir = Path(Config.LOG_DIR)
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    # Console handler
+    # Add console logging
     logger.add(
         sys.stderr,
         level=Config.LOG_LEVEL,
@@ -18,9 +21,9 @@ def setup_logger():
         enqueue=True
     )
 
-    # File handler
+    # Add file logging
     logger.add(
-        str(Path(Config.LOG_FILE)),  # Convert Path to string
+        str(log_dir / "app.log"),
         rotation="500 MB",
         retention="10 days",
         compression="zip",
@@ -30,7 +33,6 @@ def setup_logger():
         diagnose=True,
         enqueue=True
     )
-
     return logger
 
 logger = setup_logger()

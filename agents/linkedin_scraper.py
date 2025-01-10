@@ -44,6 +44,7 @@ class LinkedInFeedScraper:
            
    def login(self):
        """Login to LinkedIn with retry mechanism"""
+       logger.debug("Entering login method.")
        for attempt in range(Config.MAX_RETRIES):
            try:
                logger.info("Attempting LinkedIn login")
@@ -71,7 +72,7 @@ class LinkedInFeedScraper:
            except Exception as e:
                logger.warning(f"Login attempt {attempt + 1} failed: {str(e)}")
                if attempt == Config.MAX_RETRIES - 1:
-                   logger.error("All login attempts failed")
+                   logger.exception("All login attempts failed")
                    raise
                time.sleep(2 ** attempt)
                

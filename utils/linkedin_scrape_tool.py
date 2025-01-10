@@ -1,6 +1,6 @@
 from crewai.tools import BaseTool
 from typing import Optional, Dict, Any
-from utils.linkedin_scraper import LinkedInFeedScraper
+from agents.linkedin_scraper import LinkedInFeedScraper
 from utils.logger import logger
 import os
 from datetime import datetime

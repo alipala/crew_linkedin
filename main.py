@@ -1,13 +1,11 @@
+from utils.logger import logger
 import os
 import yaml
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
-from utils.webdriver_tool import WebDriverTool
 from utils.linkedin_scrape_tool import LinkedInScrapeTool
 from agents.post_create_agent import PostCreateAgent
 from agents.notification_agent import NotificationAgent
-from config.settings import Config
-from utils.logger import logger
 import ssl
 from tests.verify_config import verify_configuration
 import sys
@@ -53,11 +51,13 @@ def main():
 
         # Load configurations
         configs = load_yaml_configs()
+        logger.debug(f"Configurations loaded: {configs}")
 
         # Initialize tools
         linkedin_tool = LinkedInScrapeTool()
         serper_tool = SerperDevTool()
 
+        logger.info("Initializing agents and tasks...")
         # Initialize agents
         linkedin_scrape_agent = Agent(
             config=configs['agents']['linkedin_scrape_agent'],
@@ -116,7 +116,11 @@ def main():
             config=configs['tasks']['create_post'],
             agent=post_create_agent,
             context=[web_search_task],
-            output_dict=True
+            output_dict={
+                "content": str,
+                "image": str,
+                "status": str
+            }
         )
         notify_user_task = Task(
             config=configs['tasks']['notify_user'],
@@ -155,11 +159,16 @@ def main():
 
         # Log results of tasks
         logger.info("LinkedIn content generation process completed successfully.")
-        logger.debug(f"Final result: {result}")
+        return result
 
     except Exception as e:
-        logger.error(f"An error occurred during the process: {e}")
+        logger.exception(f"An error occurred during the process: {e}")
         raise
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.exception("Unhandled exception occurred.")
+        raise
+

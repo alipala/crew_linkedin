@@ -1,7 +1,7 @@
-from utils.logger import logger
 from crewai import Agent
 import openai
 from typing import Dict, Any, Optional
+from utils.logger import logger
 
 class PostCreateAgent(Agent):
     """
@@ -10,16 +10,6 @@ class PostCreateAgent(Agent):
     """
 
     def run(self, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Execute post creation process with comprehensive logging and error handling.
-        
-        Args:
-            context (Dict[str, Any], optional): Input context containing creative insights 
-                                              and research references.
-        
-        Returns:
-            Dict[str, Any]: Generated post content and optional multimedia elements.
-        """
         logger.info("PostCreateAgent: Starting post creation process")
         try:
             # Validate context
@@ -50,8 +40,7 @@ class PostCreateAgent(Agent):
                 temperature=0.7
             )
             content = response.choices[0].text.strip()
-            logger.info("PostCreateAgent: Successfully generated text content")
-            logger.debug(f"PostCreateAgent: Generated content preview: {content[:100]}...")
+            logger.info(f"PostCreateAgent: Generated content preview: {content[:100]}...")
 
             # Handle multimedia generation if required
             image = None
@@ -66,20 +55,20 @@ class PostCreateAgent(Agent):
                 "image": image,
                 "status": "success"
             }
-            logger.info("PostCreateAgent: Successfully completed post creation")
-            logger.debug(f"PostCreateAgent: Final output: {str(output)[:200]}...")
+            logger.info(f"PostCreateAgent: Final output: {str(output)[:200]}...")
             
-            return output
+            return {"content": content, "status": "success"}
+            #return output
 
         except Exception as e:
             error_msg = f"PostCreateAgent failed: {str(e)}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             return {
                 "content": None,
                 "image": None,
                 "status": "error",
-                "error": error_msg
-            }
+                "error": str(e)
+        }
 
     def _create_prompt(self, creative_insights: str, research_references: str) -> str:
         """Create the prompt for content generation."""

@@ -50,14 +50,15 @@ create_post:
     - conduct_web_search  # Task provided by the "Knowledge Discovery Specialist."
 
 notify_user:
-  description: >
-    Notify the user with the draft LinkedIn post and handle feedback through email.
-  expected_output: >
-    Status of notification delivery and user feedback.
+  description: Notify user with LinkedIn post draft for review
+  expected_output: Email notification status
   agent: notification_agent
   context: 
     - create_post
-  output_dict: true
+  output_dict:
+    status: str
+    email_sent: bool
+    recipient: str
 
 publish_post:
   description: >

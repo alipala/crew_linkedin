@@ -17,8 +17,12 @@ class Config:
     
     # Logging configuration
     LOG_DIR = Path(BASE_DIR / 'logs')
-    LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG')
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG') if os.getenv('ENVIRONMENT') == 'development' else 'INFO'
     LOG_FILE = Path(LOG_DIR / 'app.log')
+
+    # Ensure log directory exists
+    if not LOG_DIR.exists():    
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
     
     # Output and data directories
     OUTPUT_DIR = Path(BASE_DIR / 'data' / 'output')
@@ -122,3 +126,8 @@ class Config:
             'temperature': cls.LLM_TEMPERATURE,
             'max_tokens': cls.MAX_TOKENS,
         }
+    
+    @classmethod
+    def validate_email_config(cls) -> bool:
+        required = ['EMAIL_ADDRESS', 'EMAIL_PASSWORD', 'SMTP_SERVER', 'SMTP_PORT']
+        return all(getattr(cls, attr) for attr in required)
