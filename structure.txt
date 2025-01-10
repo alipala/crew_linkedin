@@ -2,9 +2,7 @@
 ├── README.md
 ├── __init__.py
 ├── agents
-│   ├── linkedin_scraper.py
-│   ├── notification_agent.py
-│   └── post_create_agent.py
+│   └── linkedin_scraper.py
 ├── config
 │   ├── __init__.py
 │   ├── agents.yaml
@@ -12,7 +10,7 @@
 │   └── tasks.yaml
 ├── data
 │   └── output
-│       └── linkedin_posts_20250110_100358.json
+│       └── linkedin_posts_20250110_221855.json
 ├── logs
 │   └── app.log
 ├── main.py
@@ -28,7 +26,8 @@
     ├── linkedin_scrape_tool.py
     ├── logger.py
     ├── models.py
+    ├── notification_slack_tool.py
     ├── notification_utils.py
     └── test_mail.py
 
-8 directories, 24 files
+8 directories, 23 files

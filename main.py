@@ -1,117 +1,72 @@
 from utils.logger import logger
 import os
-import yaml
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 from utils.linkedin_scrape_tool import LinkedInScrapeTool
 from utils.notification_slack_tool import NotificationSlackTool
+from utils.models import LinkedInPostContent
 import ssl
-from tests.verify_config import verify_configuration
-import sys
 import logging
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
-os.environ["CREWAI_LOG_LEVEL"] = "DEBUG" 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.DEBUG)
 
-def load_yaml_configs():
-    """Load configurations from YAML files."""
-    files = {
-        'agents': 'config/agents.yaml',
-        'tasks': 'config/tasks.yaml'
-    }
-
-    configs = {}
-    for config_type, file_path in files.items():
-        if not os.path.exists(file_path):
-            logger.error(f"Configuration file not found: {file_path}")
-            raise FileNotFoundError(f"Configuration file not found: {file_path}")
-
-        logger.info(f"Loading configuration from {file_path}")
-        try:
-            with open(file_path, 'r') as file:
-                configs[config_type] = yaml.safe_load(file)
-                logger.debug(f"{config_type} configurations: {configs[config_type]}")
-        except yaml.YAMLError as e:
-            logger.error(f"Error parsing YAML file {file_path}: {e}")
-            raise
-    return configs
-
-def validate_create_post_task_output(task_output):
-    """Validate output of create_post_task."""
-    if not task_output or not task_output.result:
-        logger.error("Create Post Task did not produce any output or result.")
-        sys.exit(1)
-    logger.info(f"Create Post Task output: {task_output.result}")
-
-
-def prepare_notify_user_task_context(create_post_task_output):
-    """Prepare context for notify_user_task."""
-    notify_context = {
-        "description": create_post_task_output.result.get("description")
-    }
-    if not notify_context["description"]:
-        logger.error("Notify User Task context is invalid. Missing 'description'.")
-        sys.exit(1)
-    logger.info(f"Context for Notify User Task: {notify_context}")
-    return notify_context
 
 def main():
-
-    # Verify configuration first
-    if not verify_configuration():
-        logger.error("Configuration verification failed. Exiting...")
-        sys.exit(1)
-        
-    logger.info("Configuration verified. Starting application...")
-
     try:
-        logger.info("Initializing LinkedIn Content Generation Pipeline...")
-
-        # Load configurations
-        configs = load_yaml_configs()
-        logger.debug(f"Configurations loaded: {configs}")
-
         # Initialize tools
         linkedin_tool = LinkedInScrapeTool()
         serper_tool = SerperDevTool()
         notification_slack_tool = NotificationSlackTool()
 
-        logger.info("Initializing agents and tasks...")
         # Initialize agents
         linkedin_scrape_agent = Agent(
-            config=configs['agents']['linkedin_scrape_agent'],
+            role="LinkedIn Content Explorer",
+            goal="Identify and collect engaging LinkedIn posts about AI topics",
+            backstory="Expert at discovering trending AI content on LinkedIn.",
             tools=[linkedin_tool],
             llm="gpt-4",
             verbose=True
         )
+
         linkedin_analyze_agent = Agent(
-            config=configs['agents']['linkedin_interaction_analyze_agent'],
+            role="LinkedIn Engagement Analyst",
+            goal="Analyze LinkedIn posts to identify trends and engagement metrics",
+            backstory="Expert at analyzing engagement patterns and identifying successful content strategies.",
             llm="gpt-4",
             verbose=True
         )
+
         brainstorm_agent = Agent(
-            config=configs['agents']['brainstorm_agent'],
+            role="Creative Insights Generator",
+            goal="Generate content ideas based on analyzed data",
+            backstory="Expert at identifying content opportunities and crafting engaging narratives.",
             llm="gpt-4",
             verbose=True
         )
+
         web_search_agent = Agent(
-            config=configs['agents']['web_search_agent'],
+            role="Knowledge Discovery Specialist",
+            goal="Research and validate content topics",
+            backstory="Expert at finding authoritative sources and relevant research.",
             tools=[serper_tool],
             llm="gpt-3.5-turbo",
             verbose=True
         )
+
         post_create_agent = Agent(
-            config=configs['agents']['post_create_agent'],
+            role="LinkedIn Content Creator",
+            goal="Create engaging LinkedIn posts",
+            backstory="Expert at writing viral LinkedIn content.",
             llm="gpt-4",
             verbose=True
         )
+
         notification_agent = Agent(
-            config=configs['agents']['notification_agent'],
+            role="Notification Coordinator",
+            goal="Handle content review notifications",
+            backstory="Expert at managing content workflow and gathering feedback.",
             tools=[notification_slack_tool],
             llm="gpt-3.5-turbo",
             verbose=True
@@ -119,42 +74,65 @@ def main():
 
         # Initialize tasks
         scrape_task = Task(
-            config=configs['tasks']['scrape_linkedin_posts'],
-            agent=linkedin_scrape_agent,
-            verbose=True 
+            description="Scrape LinkedIn for popular AI-related posts",
+            expected_output="List of relevant LinkedIn posts with engagement metrics",
+            agent=linkedin_scrape_agent
         )
+
         analyze_task = Task(
-            config=configs['tasks']['analyze_engagement'],
+            description="Analyze scraped posts for engagement patterns",
+            expected_output="Analysis report of engagement trends",
             agent=linkedin_analyze_agent,
-            context=[scrape_task],
-            verbose=True 
+            context=[scrape_task]
         )
+
         brainstorm_task = Task(
-            config=configs['tasks']['generate_ideas'],
+            description="Generate content ideas based on analysis",
+            expected_output="List of content suggestions with rationale",
             agent=brainstorm_agent,
             context=[analyze_task]
         )
+
         web_search_task = Task(
-            config=configs['tasks']['conduct_web_search'],
+            description="Research supporting content for chosen topics",
+            expected_output="Research findings with sources",
             agent=web_search_agent,
-            context=[brainstorm_task],
-            verbose=True 
+            context=[brainstorm_task]
         )
+
         create_post_task = Task(
-            config=configs['tasks']['create_post'],
+            description="""Create a single, focused LinkedIn post based on the research. 
+            Focus on the most engaging topic and create one cohesive post. 
+            The output must be a single post with a title and content.""",
+            expected_output="""A single LinkedIn post in JSON format with two fields:
+            - title: The post title
+            - content: The main post content""",
             agent=post_create_agent,
             context=[web_search_task],
-            verbose=True
-        )
-        notify_user_task = Task(
-            config=configs['tasks']['notify_user'],
-            agent=notification_agent,
-            context=[create_post_task],
+            output_pydantic=LinkedInPostContent,
             verbose=True
         )
 
-        # Create crew
+        notify_user_task = Task(
+            description="""Send this LinkedIn post for review via Slack using the following format:
+            Input format: A dictionary containing 'context' with the post data.
+            The post data should include 'title' and 'content' fields.""",
+            expected_output="Confirmation of the Slack notification being sent",
+            agent=notification_agent,
+            context=[create_post_task],
+            verbose=True
+            )
+
+        # Create and execute crew
         crew = Crew(
+            agents=[
+                linkedin_scrape_agent,
+                linkedin_analyze_agent,
+                brainstorm_agent,
+                web_search_agent,
+                post_create_agent,
+                notification_agent
+            ],
             tasks=[
                 scrape_task,
                 analyze_task,
@@ -163,33 +141,17 @@ def main():
                 create_post_task,
                 notify_user_task
             ],
-            process=Process.sequential
+            process=Process.sequential,
+            verbose=True
         )
 
-        # Execute Crew
-        logger.info("Starting Crew execution...")
-        crew_output = crew.kickoff()
-
-        # Extract Create Post Task Output
-        create_post_task_output = next((task for task in crew_output.tasks_output if task.description == "Create Post"), None)
-
-        # Validate Create Post Task Output
-        validate_create_post_task_output(create_post_task_output)
-
-        # Prepare Notify User Task Context
-        notify_context = prepare_notify_user_task_context(create_post_task_output)
-        logging.info(f"Notify Context: {notify_context}")
-        notify_user_task(context=notify_context)
-
+        result = crew.kickoff()
         logger.info("Crew execution completed successfully.")
+        return result
 
     except Exception as e:
-        logger.exception(f"An error occurred during the process: {e}")
-        sys.exit(1)
+        logger.exception(f"An error occurred: {e}")
+        raise
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        logger.exception("Unhandled exception occurred.")
-        raise
+    main()
