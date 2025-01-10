@@ -8,40 +8,6 @@ linkedin_scrape_agent:
     tools to scrape LinkedIn and analyze engagement patterns.
   allow_delegation: false
   verbose: true
-  ai_topics:
-    - llm
-    - genai
-    - rag
-    - agent
-    - openai
-    - anthropic
-    - llama
-    - gpt
-    - claude
-    - gemini
-    - vector db
-    - embedding
-    - semantic search
-    - autogpt
-    - babyagi
-    - mlops
-    - ai safety
-    - ai ethics
-    - machine learning
-    - deep learning
-    - neural network
-    - artificial intelligence
-    - transformer
-    - large language model
-    - foundation model
-    - fine-tuning
-    - prompt engineering
-    - hugging face
-    - stable diffusion
-    - dall-e
-    - midjourney
-    - langchain
-
 
 linkedin_interaction_analyze_agent:
   role: >

@@ -45,6 +45,7 @@ class LinkedInScrapeTool(BaseTool):
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(posts, f, indent=2, ensure_ascii=False)
             logger.info(f"Posts saved to {filepath}")
+            f.close
             
         return filepath
     

@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -67,6 +68,8 @@ class Config:
     # Application settings
     DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
     ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+    SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
     
     @classmethod
     def validate_config(cls) -> bool:
@@ -131,3 +134,10 @@ class Config:
     def validate_email_config(cls) -> bool:
         required = ['EMAIL_ADDRESS', 'EMAIL_PASSWORD', 'SMTP_SERVER', 'SMTP_PORT']
         return all(getattr(cls, attr) for attr in required)
+    
+    @classmethod
+    def validate_slack_config(cls) -> bool:
+        if not cls.SLACK_WEBHOOK_URL:
+            print("Slack webhook URL not configured")
+            return False
+        return True

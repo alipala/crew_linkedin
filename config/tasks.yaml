@@ -11,23 +11,27 @@ scrape_linkedin_posts:
     - AI topic classifications
     - Timestamp information
   agent: linkedin_scrape_agent
+
 analyze_engagement:
   description: >
     Evaluate the engagement metrics of LinkedIn posts collected, focusing on reactions, comments, and shares to prioritize topics for further analysis.
   expected_output: >
     An analysis report with ranked topics and detailed engagement breakdowns.
+  agent: linkedin_interaction_analyze_agent
 
 generate_ideas:
   description: >
     Use engagement data to brainstorm and recommend the most promising topics for content creation. Collaborate with LLMs to refine suggestions.
   expected_output: >
     A curated list of top-performing topics with creative insights for content strategy.
+  agent: brainstorm_agent
 
 conduct_web_search:
   description: >
     Perform a detailed web search to find blogs, articles, and research papers relevant to the chosen topic. Utilize tools like Google Serper and ArXiv.
   expected_output: >
     A structured list of references, categorized by source type, relevance, and reliability.
+  agent: web_search_agent
 
 create_post:
   description: >
@@ -48,6 +52,7 @@ create_post:
   prerequisites:
     - generate_ideas  # Task provided by the "Creative Insights Generator."
     - conduct_web_search  # Task provided by the "Knowledge Discovery Specialist."
+  agent: post_create_agent
 
 notify_user:
   description: Notify user with LinkedIn post draft for review
@@ -55,10 +60,6 @@ notify_user:
   agent: notification_agent
   context: 
     - create_post
-  output_dict:
-    status: str
-    email_sent: bool
-    recipient: str
 
 publish_post:
   description: >
