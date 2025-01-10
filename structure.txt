@@ -2,16 +2,17 @@
 ├── README.md
 ├── __init__.py
 ├── agents
-│   ├── agents.yaml
+│   ├── linkedin_scraper.py
 │   ├── notification_agent.py
-│   ├── post_create_agent.py
-│   └── tasks.yaml
+│   └── post_create_agent.py
 ├── config
 │   ├── __init__.py
-│   └── settings.py
+│   ├── agents.yaml
+│   ├── settings.py
+│   └── tasks.yaml
 ├── data
 │   └── output
-│       └── linkedin_posts_20250110_005313.json
+│       └── linkedin_posts_20250110_100358.json
 ├── logs
 │   └── app.log
 ├── main.py
@@ -24,13 +25,10 @@
 │   ├── test_undetected_chromedriver.py
 │   └── verify_config.py
 └── utils
-    ├── helper.py
     ├── linkedin_scrape_tool.py
-    ├── linkedin_scraper.py
     ├── logger.py
     ├── models.py
     ├── notification_utils.py
-    ├── test_mail.py
-    └── webdriver_tool.py
+    └── test_mail.py
 
-8 directories, 26 files
+8 directories, 24 files

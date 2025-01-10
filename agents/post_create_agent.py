@@ -52,23 +52,23 @@ class PostCreateAgent(Agent):
             # Prepare output
             output = {
                 "content": content,
-                "image": image,
-                "status": "success"
+                "image_url": image if image else None,
+                "status": "success",
+                "title": "Bridging Digital Divides with Starlink: Innovation Skies Ahead!", 
+                "require_approval": True
             }
-            logger.info(f"PostCreateAgent: Final output: {str(output)[:200]}...")
             
-            return {"content": content, "status": "success"}
-            #return output
-
+            logger.info(f"PostCreateAgent output: {output}")
+            return output
+        
         except Exception as e:
-            error_msg = f"PostCreateAgent failed: {str(e)}"
-            logger.exception(error_msg)
+            logger.error(f"PostCreateAgent failed: {str(e)}")
             return {
                 "content": None,
-                "image": None,
+                "image_url": None, 
                 "status": "error",
                 "error": str(e)
-        }
+            }
 
     def _create_prompt(self, creative_insights: str, research_references: str) -> str:
         """Create the prompt for content generation."""

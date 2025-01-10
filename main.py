@@ -9,9 +9,16 @@ from agents.notification_agent import NotificationAgent
 import ssl
 from tests.verify_config import verify_configuration
 import sys
+import logging
 
 
 ssl._create_default_https_context = ssl._create_unverified_context
+
+os.environ["CREWAI_LOG_LEVEL"] = "DEBUG" 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 def load_yaml_configs():
     """Load configurations from YAML files."""
@@ -36,6 +43,50 @@ def load_yaml_configs():
             raise
     return configs
 
+def test_notification_agent(configs):
+    # Create a mock task result as context
+    test_context = [{
+        'description': 'Previous task description',
+        'expected_output': 'Previous task expected output',
+        'raw': {
+            'content': 'This is a test LinkedIn post about AI and technology.',
+            'image_url': 'https://example.com/test-image.jpg',
+            'status': 'success',
+            'title': 'Test LinkedIn Post: AI Technology Trends 2025',
+            'require_approval': True
+        }
+    }]
+
+    # Initialize notification agent
+    notification_agent = NotificationAgent(
+        config=configs['agents']['notification_agent'],
+        llm="gpt-3.5-turbo",
+        verbose=True
+    )
+
+    # Create test task 
+    test_notify_task = Task(
+        description="Send email notification for post review",
+        expected_output="Email notification sent successfully with post content",
+        agent=notification_agent,
+        context=test_context,
+        output_dict={
+            "email_sent": bool,
+            "recipient": str,
+            "status": str
+        }
+    )
+
+    try:
+        logger.info("Executing test notification task...")
+        result = test_notify_task.execute_sync()
+        logger.info(f"Test notification result: {result}")
+        return result
+
+    except Exception as e:
+        logger.error(f"Test notification failed: {e}", exc_info=True)
+        return None
+    
 def main():
 
     # Verify configuration first
@@ -95,12 +146,14 @@ def main():
         # Initialize tasks
         scrape_task = Task(
             config=configs['tasks']['scrape_linkedin_posts'],
-            agent=linkedin_scrape_agent
+            agent=linkedin_scrape_agent,
+            verbose=True 
         )
         analyze_task = Task(
             config=configs['tasks']['analyze_engagement'],
             agent=linkedin_analyze_agent,
-            context=[scrape_task]
+            context=[scrape_task],
+            verbose=True 
         )
         brainstorm_task = Task(
             config=configs['tasks']['generate_ideas'],
@@ -110,7 +163,8 @@ def main():
         web_search_task = Task(
             config=configs['tasks']['conduct_web_search'],
             agent=web_search_agent,
-            context=[brainstorm_task]
+            context=[brainstorm_task],
+            verbose=True 
         )
         create_post_task = Task(
             config=configs['tasks']['create_post'],
@@ -118,15 +172,22 @@ def main():
             context=[web_search_task],
             output_dict={
                 "content": str,
-                "image": str,
-                "status": str
+                "image_url": str,
+                "status": str,
+                "title": str,
+                "require_approval": bool
             }
         )
+        
         notify_user_task = Task(
             config=configs['tasks']['notify_user'],
             agent=notification_agent,
             context=[create_post_task],
-            output_dict=True
+            output_dict={
+                "email_sent": bool,
+                "recipient": str,
+                "status": str
+            }
         )
 
         # Create crew
@@ -156,6 +217,10 @@ def main():
 
         # Execute all tasks via the crew
         result = crew.kickoff()
+
+        logger.info("Running notification agent test...")
+        test_result = test_notification_agent(configs)  # Pass configs to the test function
+        logger.info(f"Notification test completed with result: {test_result}")
 
         # Log results of tasks
         logger.info("LinkedIn content generation process completed successfully.")
