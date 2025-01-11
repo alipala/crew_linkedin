@@ -26,7 +26,7 @@ def main():
             goal="Identify and collect engaging LinkedIn posts about AI topics",
             backstory="Expert at discovering trending AI content on LinkedIn.",
             tools=[linkedin_tool],
-            llm="gpt-4",
+            llm="gpt-4o-mini",
             verbose=True
         )
 
@@ -34,7 +34,7 @@ def main():
             role="LinkedIn Engagement Analyst",
             goal="Analyze LinkedIn posts to identify trends and engagement metrics",
             backstory="Expert at analyzing engagement patterns and identifying successful content strategies.",
-            llm="gpt-4",
+            llm="gpt-4o-mini",
             verbose=True
         )
 
@@ -42,7 +42,7 @@ def main():
             role="Creative Insights Generator",
             goal="Generate content ideas based on analyzed data",
             backstory="Expert at identifying content opportunities and crafting engaging narratives.",
-            llm="gpt-4",
+            llm="gpt-4o-mini",
             verbose=True
         )
 
@@ -59,7 +59,7 @@ def main():
             role="LinkedIn Content Creator",
             goal="Create engaging LinkedIn posts",
             backstory="Expert at writing viral LinkedIn content.",
-            llm="gpt-4",
+            llm="gpt-4o-mini",
             verbose=True
         )
 
