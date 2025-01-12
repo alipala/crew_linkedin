@@ -75,6 +75,7 @@ class Config:
     ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
     SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
+    TWOCAPTCHA_API_KEY = os.getenv('TWOCAPTCHA_API_KEY')
 
     API_KEY = os.getenv("API_KEY")
     @classmethod
