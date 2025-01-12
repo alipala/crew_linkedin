@@ -28,3 +28,8 @@ class LinkedInPost(BaseModel):
     scraped_at: datetime = Field(default_factory=datetime.now, description="Timestamp of when the post was scraped")
     is_ai_related: bool = Field(default=False, description="Whether the post is AI-related")
     matched_ai_topics: List[str] = Field(default_factory=list, description="AI topics found in the post")
+
+class LinkedInPostContent(BaseModel):
+    """Model for structured LinkedIn post content"""
+    title: str = Field(description="The title of the LinkedIn post")
+    content: str = Field(description="The main content of the LinkedIn post")

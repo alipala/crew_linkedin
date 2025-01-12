@@ -1,35 +1,33 @@
 .
 ├── README.md
+├── __init__.py
 ├── agents
-│   ├── agents.yaml
-│   ├── brainstorm_agent.py
-│   ├── linkedin_interaction_analyze_agent.py
-│   ├── linkedin_scrape_agent.py
-│   ├── notification_agent.py
-│   ├── post_create_agent.py
-│   ├── share_agent.py
-│   ├── tasks.yaml
-│   └── web_search_agent.py
-├── agents.yaml
+│   └── linkedin_scraper.py
 ├── config
-│   └── settings.py
+│   ├── __init__.py
+│   ├── agents.yaml
+│   ├── settings.py
+│   └── tasks.yaml
 ├── data
 │   └── output
-├── db
-│   └── bb4ebc94-eb65-4d84-b2ea-1374d178cd1f
+│       └── linkedin_posts_20250110_221855.json
 ├── logs
-│   └── scraper.log
+│   └── app.log
 ├── main.py
 ├── requirements.txt
 ├── structure.txt
-├── tasks.yaml
 ├── tests
-│   └── test_undetected_chromedriver.py
+│   ├── __init__.py
+│   ├── test_directories.py
+│   ├── test_notification_agent.py
+│   ├── test_undetected_chromedriver.py
+│   └── verify_config.py
 └── utils
-    ├── api_clients.py
-    ├── helper.py
+    ├── linkedin_scrape_tool.py
     ├── logger.py
     ├── models.py
-    └── webdriver_tool.py
+    ├── notification_slack_tool.py
+    ├── notification_utils.py
+    └── test_mail.py
 
-10 directories, 23 files
+8 directories, 23 files

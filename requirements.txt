@@ -10,3 +10,9 @@ selenium
 pandas
 loguru
 webdriver-manager
+fastapi
+uvicorn
+python-multipart
+hypercorn
+APScheduler
+pytz

@@ -1,130 +1,156 @@
+from utils.logger import logger
 import os
-import yaml
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
-from utils.webdriver_tool import WebDriverTool
 from utils.linkedin_scrape_tool import LinkedInScrapeTool
-from utils.post_create_agent import PostCreateAgent
-from utils.logger import logger
-from config.settings import Config
+from utils.notification_slack_tool import NotificationSlackTool
+from utils.models import LinkedInPostContent
 import ssl
+import logging
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
-def load_yaml_configs():
-    """Load configurations from YAML files."""
-    files = {
-        'agents': 'agents/agents.yaml',
-        'tasks': 'agents/tasks.yaml'
-    }
-    
-    configs = {}
-    for config_type, file_path in files.items():
-        with open(file_path, 'r') as file:
-            configs[config_type] = yaml.safe_load(file)
-    return configs
+logging.basicConfig(level=logging.DEBUG)
+
 
 def main():
     try:
-        logger.info("Initializing LinkedIn Content Generation Pipeline...")
-        
-        # Load configurations
-        configs = load_yaml_configs()
-        
         # Initialize tools
         linkedin_tool = LinkedInScrapeTool()
         serper_tool = SerperDevTool()
-        
-        # Create agents with their respective tools and LLMs
-        linkedin_scrape_agent = Agent(
-            config=configs['agents']['linkedin_scrape_agent'],
-            tools=[linkedin_tool],
-            llm="gpt-4",  # Using GPT-4 for complex pattern recognition
-            verbose=True
-        )
-        
-        linkedin_analyze_agent = Agent(
-            config=configs['agents']['linkedin_interaction_analyze_agent'],
-            llm="gpt-4",  # Using GPT-4 for analysis
-            verbose=True
-        )
-        
-        brainstorm_agent = Agent(
-            config=configs['agents']['brainstorm_agent'],
-            llm="gpt-4",  # Using GPT-4 for creative tasks
-            verbose=True
-        )
-        
-        web_search_agent = Agent(
-            config=configs['agents']['web_search_agent'],
-            tools=[serper_tool],
-            llm="gpt-3.5-turbo",  # Using GPT-3.5 for simpler search tasks
-            verbose=True
-        )
+        notification_slack_tool = NotificationSlackTool()
 
-        post_create_agent = PostCreateAgent(
-            config=configs['agents']['post_create_agent'],
+        # Initialize agents
+        linkedin_scrape_agent = Agent(
+            role="LinkedIn Content Explorer",
+            goal="Identify and collect engaging LinkedIn posts about AI topics",
+            backstory="Expert at discovering trending AI content on LinkedIn.",
+            tools=[linkedin_tool],
             llm="gpt-4",
             verbose=True
         )
-        
-        # Create tasks
+
+        linkedin_analyze_agent = Agent(
+            role="LinkedIn Engagement Analyst",
+            goal="Analyze LinkedIn posts to identify trends and engagement metrics",
+            backstory="Expert at analyzing engagement patterns and identifying successful content strategies.",
+            llm="gpt-4",
+            verbose=True
+        )
+
+        brainstorm_agent = Agent(
+            role="Creative Insights Generator",
+            goal="Generate content ideas based on analyzed data",
+            backstory="Expert at identifying content opportunities and crafting engaging narratives.",
+            llm="gpt-4",
+            verbose=True
+        )
+
+        web_search_agent = Agent(
+            role="Knowledge Discovery Specialist",
+            goal="Research and validate content topics",
+            backstory="Expert at finding authoritative sources and relevant research.",
+            tools=[serper_tool],
+            llm="gpt-3.5-turbo",
+            verbose=True
+        )
+
+        post_create_agent = Agent(
+            role="LinkedIn Content Creator",
+            goal="Create engaging LinkedIn posts",
+            backstory="Expert at writing viral LinkedIn content.",
+            llm="gpt-4",
+            verbose=True
+        )
+
+        notification_agent = Agent(
+            role="Notification Coordinator",
+            goal="Handle content review notifications",
+            backstory="Expert at managing content workflow and gathering feedback.",
+            tools=[notification_slack_tool],
+            llm="gpt-3.5-turbo",
+            verbose=True
+        )
+
+        # Initialize tasks
         scrape_task = Task(
-            config=configs['tasks']['scrape_linkedin_posts'],
+            description="Scrape LinkedIn for popular AI-related posts",
+            expected_output="List of relevant LinkedIn posts with engagement metrics",
             agent=linkedin_scrape_agent
         )
-        
+
         analyze_task = Task(
-            config=configs['tasks']['analyze_engagement'],
+            description="Analyze scraped posts for engagement patterns",
+            expected_output="Analysis report of engagement trends",
             agent=linkedin_analyze_agent,
             context=[scrape_task]
         )
-        
+
         brainstorm_task = Task(
-            config=configs['tasks']['generate_ideas'],
+            description="Generate content ideas based on analysis",
+            expected_output="List of content suggestions with rationale",
             agent=brainstorm_agent,
             context=[analyze_task]
         )
-        
+
         web_search_task = Task(
-            config=configs['tasks']['conduct_web_search'],
+            description="Research supporting content for chosen topics",
+            expected_output="Research findings with sources",
             agent=web_search_agent,
             context=[brainstorm_task]
         )
 
         create_post_task = Task(
-            config=configs['tasks']['create_post'],
+            description="""Create a single, focused LinkedIn post based on the research. 
+            Focus on the most engaging topic and create one cohesive post. 
+            The output must be a single post with a title and content.""",
+            expected_output="""A single LinkedIn post in JSON format with two fields:
+            - title: The post title
+            - content: The main post content""",
             agent=post_create_agent,
-            context=[web_search_task]
+            context=[web_search_task],
+            output_pydantic=LinkedInPostContent,
+            verbose=True
         )
-        
-        # Create crew
+
+        notify_user_task = Task(
+            description="""Send this LinkedIn post for review via Slack using the following format:
+            Input format: A dictionary containing 'context' with the post data.
+            The post data should include 'title' and 'content' fields.""",
+            expected_output="Confirmation of the Slack notification being sent",
+            agent=notification_agent,
+            context=[create_post_task],
+            verbose=True
+            )
+
+        # Create and execute crew
         crew = Crew(
             agents=[
                 linkedin_scrape_agent,
                 linkedin_analyze_agent,
                 brainstorm_agent,
                 web_search_agent,
-                post_create_agent
+                post_create_agent,
+                notification_agent
             ],
             tasks=[
                 scrape_task,
                 analyze_task,
                 brainstorm_task,
                 web_search_task,
-                create_post_task
+                create_post_task,
+                notify_user_task
             ],
-            verbose=True,
-            process=Process.sequential
+            process=Process.sequential,
+            verbose=True
         )
-        
-        # Kickoff the crew
+
         result = crew.kickoff()
-        logger.info("LinkedIn content generation process completed successfully")
+        logger.info("Crew execution completed successfully.")
         return result
-        
+
     except Exception as e:
-        logger.error(f"An error occurred during the process: {str(e)}")
+        logger.exception(f"An error occurred: {e}")
         raise
 
 if __name__ == "__main__":
