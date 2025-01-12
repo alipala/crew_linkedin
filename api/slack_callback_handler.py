@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
@@ -10,7 +10,7 @@ import hashlib
 import json
 import time
 
-app = FastAPI()
+router = APIRouter()
 
 class SlackVerification(BaseModel):
     token: str
@@ -38,7 +38,7 @@ def verify_slack_signature(request_body: bytes, timestamp: str, signature: str) 
     )
     return hmac.compare_digest(computed_signature, signature)
 
-@app.post("/slack/interactive")
+@router.post("/interactive")
 async def slack_interactive(request: Request):
     try:
         # Get raw body and headers for verification
@@ -104,11 +104,16 @@ async def slack_interactive(request: Request):
                 
         elif action == "regenerate":
             logger.info(f"Content regeneration requested by {user}")
+            # Get scheduler instance from app state
+            scheduler = request.app.state.scheduler
+            # Trigger workflow execution
+            await scheduler.execute_crew_workflow()
+            
             return JSONResponse(
                 content={
                     "response_type": "in_channel",
                     "replace_original": True,
-                    "text": f"🔄 Content regeneration requested by {user}. New version will be posted soon."
+                    "text": f"🔄 Content regeneration requested by {user}. Starting new content generation..."
                 }
             )
             
@@ -122,8 +127,3 @@ async def slack_interactive(request: Request):
     except Exception as e:
         logger.error(f"Error processing Slack interaction: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}

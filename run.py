@@ -1,17 +1,60 @@
 import asyncio
 from hypercorn.config import Config as HypercornConfig
 from hypercorn.asyncio import serve
-from main import main as crew_main
-from api.slack_callback_handler import app
+from fastapi import FastAPI, Request
+from api.slack_callback_handler import router as slack_router
+from api.endpoints import router as api_router
+from scheduler import CrewScheduler
 from utils.logger import logger
 import signal
-import sys
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Create FastAPI app
+app = FastAPI(title="CrewAI LinkedIn Bot")
+
+# Include routers
+app.include_router(slack_router, prefix="/slack", tags=["slack"])
+app.include_router(api_router, prefix="/api", tags=["api"])
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize scheduler and schedule daily job on startup"""
+    try:
+        scheduler = CrewScheduler()
+        scheduler.schedule_daily_job()
+        scheduler.start()
+        
+        # Store scheduler in app state
+        app.state.scheduler = scheduler
+        logger.info("Application started successfully")
+        
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        raise
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    try:
+        if hasattr(app.state, 'scheduler'):
+            app.state.scheduler.shutdown()
+        logger.info("Application shutdown complete")
+        
+    except Exception as e:
+        logger.error(f"Error during shutdown: {str(e)}")
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "scheduler_running": app.state.scheduler.scheduler.running if hasattr(app.state, 'scheduler') else False
+    }
 
 async def shutdown(sig, loop):
     """Graceful shutdown handler"""
@@ -21,16 +64,6 @@ async def shutdown(sig, loop):
     logger.info(f"Cancelling {len(tasks)} tasks")
     await asyncio.gather(*tasks, return_exceptions=True)
     loop.stop()
-
-async def run_crew():
-    """Run CrewAI workflow in a loop"""
-    while True:
-        try:
-            await asyncio.get_event_loop().run_in_executor(None, crew_main)
-            await asyncio.sleep(300)  # Run every 5 minutes
-        except Exception as e:
-            logger.error(f"CrewAI workflow error: {str(e)}")
-            await asyncio.sleep(60)  # Wait before retry
 
 async def main():
     """Main application entry point"""
@@ -49,19 +82,11 @@ async def main():
     config.worker_class = "asyncio"
     config.use_reloader = True if os.getenv("ENVIRONMENT") == "development" else False
     
-    # Create and run tasks
-    server = serve(app, config)
-    crew_runner = run_crew()
-    
     try:
-        await asyncio.gather(server, crew_runner)
-    except asyncio.CancelledError:
-        logger.info("Shutdown initiated")
+        await serve(app, config)
     except Exception as e:
         logger.error(f"Application error: {str(e)}")
         sys.exit(1)
-    finally:
-        logger.info("Shutdown complete")
 
 if __name__ == "__main__":
     try:

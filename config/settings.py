@@ -75,7 +75,8 @@ class Config:
     ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
     SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
-    
+
+    API_KEY = os.getenv("API_KEY")
     @classmethod
     def validate_config(cls) -> bool:
         """
