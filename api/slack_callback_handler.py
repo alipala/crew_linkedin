@@ -12,11 +12,6 @@ import time
 
 router = APIRouter()
 
-class SlackVerification(BaseModel):
-    token: str
-    challenge: str
-    type: str
-
 class SlackEvent(BaseModel):
     type: str
     user: Optional[Dict[str, Any]]
@@ -104,18 +99,43 @@ async def slack_interactive(request: Request):
                 
         elif action == "regenerate":
             logger.info(f"Content regeneration requested by {user}")
-            # Get scheduler instance from app state
-            scheduler = request.app.state.scheduler
-            # Trigger workflow execution
-            await scheduler.execute_crew_workflow()
             
-            return JSONResponse(
-                content={
-                    "response_type": "in_channel",
-                    "replace_original": True,
-                    "text": f"🔄 Content regeneration requested by {user}. Starting new content generation..."
-                }
-            )
+            try:
+                # Get scheduler from app state
+                scheduler = request.app.state.scheduler
+                notification_tool = request.app.state.notification_tool
+                
+                # Send initial response to Slack using notification tool
+                notification_result = notification_tool._run({
+                    "context": {
+                        "title": "Content Regeneration",
+                        "content": f"🔄 Content regeneration requested by {user}. Starting new generation process..."
+                    }
+                })
+                
+                if not notification_result.get("sent"):
+                    raise Exception("Failed to send notification")
+                
+                # Trigger new workflow execution
+                await scheduler.execute_crew_workflow()
+                
+                return JSONResponse(
+                    content={
+                        "response_type": "in_channel",
+                        "replace_original": True,
+                        "text": f"🔄 Content regeneration initiated by {user}. A new post will be generated and sent for review."
+                    }
+                )
+                
+            except Exception as e:
+                logger.error(f"Error during regeneration: {str(e)}")
+                return JSONResponse(
+                    content={
+                        "response_type": "in_channel",
+                        "replace_original": True,
+                        "text": f"❌ Error regenerating content: {str(e)}"
+                    }
+                )
             
         else:
             raise HTTPException(status_code=400, detail="Invalid action")

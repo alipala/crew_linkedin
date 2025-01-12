@@ -6,13 +6,9 @@ from api.slack_callback_handler import router as slack_router
 from api.endpoints import router as api_router
 from scheduler import CrewScheduler
 from utils.logger import logger
+from utils.notification_slack_tool import NotificationSlackTool
 import signal
-import os
-from dotenv import load_dotenv
-
-
-# Load environment variables from .env file
-load_dotenv()
+import sys
 
 # Create FastAPI app
 app = FastAPI(title="CrewAI LinkedIn Bot")
@@ -21,16 +17,22 @@ app = FastAPI(title="CrewAI LinkedIn Bot")
 app.include_router(slack_router, prefix="/slack", tags=["slack"])
 app.include_router(api_router, prefix="/api", tags=["api"])
 
+# Create Slack notification tool for state
+notification_tool = NotificationSlackTool()
+
 @app.on_event("startup")
 async def startup_event():
-    """Initialize scheduler and schedule daily job on startup"""
+    """Initialize scheduler and state on startup"""
     try:
+        # Initialize scheduler
         scheduler = CrewScheduler()
         scheduler.schedule_daily_job()
         scheduler.start()
         
-        # Store scheduler in app state
+        # Store in app state
         app.state.scheduler = scheduler
+        app.state.notification_tool = notification_tool
+        
         logger.info("Application started successfully")
         
     except Exception as e:
@@ -80,7 +82,6 @@ async def main():
     config = HypercornConfig()
     config.bind = ["0.0.0.0:8000"]
     config.worker_class = "asyncio"
-    config.use_reloader = True if os.getenv("ENVIRONMENT") == "development" else False
     
     try:
         await serve(app, config)
