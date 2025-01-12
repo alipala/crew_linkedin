@@ -10,6 +10,7 @@ import re
 from utils.logger import logger
 from config.settings import Config
 import random
+import os
 
 class LinkedInFeedScraper:
    def __init__(self, email, password):
