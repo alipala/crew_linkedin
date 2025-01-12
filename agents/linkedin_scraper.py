@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import re
 from utils.logger import logger
 from config.settings import Config
+import random
 
 class LinkedInFeedScraper:
    def __init__(self, email, password):
@@ -26,55 +27,79 @@ class LinkedInFeedScraper:
        ]
        
    def setup_driver(self):
-       """Initialize undetected-chromedriver with headless mode"""
-       try:
-           options = uc.ChromeOptions()
-           options.add_argument('--headless=new')
-           options.add_argument('--no-sandbox')
-           options.add_argument('--disable-gpu')
-           options.add_argument('--window-size=1920,1080')
-           options.add_argument('--disable-notifications')
-           
-           self.driver = uc.Chrome(options=options)
-           self.driver.maximize_window()
-           logger.info("Browser setup completed successfully")
-       except Exception as e:
-           logger.error(f"Failed to setup browser: {str(e)}")
-           raise
+        """Initialize undetected-chromedriver with headless mode"""
+        try:
+            options = uc.ChromeOptions()
+            options.binary_location = os.getenv('CHROME_BINARY_PATH', '/usr/bin/chromium')
+            
+            # Add arguments
+            options.add_argument('--headless=new')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')  # Add this
+            options.add_argument('--disable-gpu')
+            options.add_argument('--window-size=1920,1080')
+            options.add_argument('--disable-notifications')
+            options.add_argument('--disable-blink-features=AutomationControlled')  # Add this
+            
+            # Add additional preferences
+            options.add_experimental_option('excludeSwitches', ['enable-automation'])
+            options.add_experimental_option('useAutomationExtension', False)
+            
+            # Initialize driver with custom options
+            self.driver = uc.Chrome(
+                options=options,
+                driver_executable_path='/usr/bin/chromedriver',
+                version_main=None  # Let it auto-detect version
+            )
+            
+            # Set window size
+            self.driver.maximize_window()
+            
+            # Additional settings to avoid detection
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
+            logger.info("Browser setup completed successfully")
+        except Exception as e:
+            logger.error(f"Failed to setup browser: {str(e)}")
+            raise
            
    def login(self):
-       """Login to LinkedIn with retry mechanism"""
-       logger.debug("Entering login method.")
-       for attempt in range(Config.MAX_RETRIES):
-           try:
-               logger.info("Attempting LinkedIn login")
-               self.driver.get('https://www.linkedin.com/login')
-               time.sleep(3)
-               
-               email_field = WebDriverWait(self.driver, 10).until(
-                   EC.presence_of_element_located((By.ID, 'username'))
-               )
-               email_field.send_keys(self.email)
-               
-               password_field = self.driver.find_element(By.ID, 'password')
-               password_field.send_keys(self.password)
-               
-               login_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-               login_button.click()
-               
-               WebDriverWait(self.driver, 20).until(
-                   EC.presence_of_element_located((By.CSS_SELECTOR, ".feed-shared-update-v2"))
-               )
-               
-               logger.success("Successfully logged in to LinkedIn")
-               return True
-               
-           except Exception as e:
-               logger.warning(f"Login attempt {attempt + 1} failed: {str(e)}")
-               if attempt == Config.MAX_RETRIES - 1:
-                   logger.exception("All login attempts failed")
-                   raise
-               time.sleep(2 ** attempt)
+        """Login to LinkedIn with retry mechanism"""
+        for attempt in range(3):
+            try:
+                logger.info(f"Login attempt {attempt + 1}")
+                self.driver.get('https://www.linkedin.com/login')
+                time.sleep(5)  # Wait for page load
+
+                # Add random delay between actions
+                time.sleep(random.uniform(2, 4))
+                email_field = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.ID, 'username'))
+                )
+                email_field.send_keys(self.email)
+                
+                time.sleep(random.uniform(1, 2))
+                password_field = self.driver.find_element(By.ID, 'password')
+                password_field.send_keys(self.password)
+                
+                time.sleep(random.uniform(1, 2))
+                login_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+                login_button.click()
+
+                # Wait for feed to load
+                WebDriverWait(self.driver, 20).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".feed-shared-update-v2"))
+                )
+                
+                logger.success("Successfully logged in to LinkedIn")
+                return True
+
+            except Exception as e:
+                logger.warning(f"Login attempt {attempt + 1} failed: {str(e)}")
+                if attempt == 2:  # Last attempt
+                    logger.exception("All login attempts failed")
+                    raise
+                time.sleep(random.uniform(5, 10))  # Random delay between attempts
                
    def extract_post_id(self, post):
        try:
