@@ -38,6 +38,11 @@ class Config:
     LINKEDIN_EMAIL = os.getenv('LINKEDIN_EMAIL')
     LINKEDIN_PASSWORD = os.getenv('LINKEDIN_PASSWORD')
     LINKEDIN_ACCESS_TOKEN = os.getenv('LINKEDIN_ACCESS_TOKEN')
+
+    # LinkedIn API Configuration
+    LINKEDIN_ACCESS_TOKEN = os.getenv('LINKEDIN_ACCESS_TOKEN')
+    LINKEDIN_PERSON_ID = os.getenv('LINKEDIN_PERSON_ID')
+    SLACK_SIGNING_SECRET = os.getenv('SLACK_SIGNING_SECRET')
     
     # Email configuration
     EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')

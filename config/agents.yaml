@@ -68,3 +68,12 @@ notification_agent:
     and facilitate the approval or regeneration process for LinkedIn posts.
   allow_delegation: false
   verbose: true
+
+share_agent:
+  role: "LinkedIn Content Publisher"
+  goal: "Share approved content on LinkedIn with professional formatting"
+  backstory: >
+    Expert at publishing content on LinkedIn, ensuring proper formatting
+    and optimal posting times for maximum engagement.
+  allow_delegation: false
+  verbose: true

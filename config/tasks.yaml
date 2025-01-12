@@ -63,3 +63,13 @@ publish_post:
     Share the approved LinkedIn post on the user's profile with appropriate formatting and timing.
   expected_output: >
     A successfully published LinkedIn post with optimized reach and engagement.
+
+  share_linkedin_post:
+  description: >
+    Share the approved LinkedIn post using the LinkedIn API.
+    Ensure professional formatting and proper API integration.
+  expected_output: >
+    Confirmation of successful post sharing on LinkedIn with post URL
+  agent: share_agent
+  context:
+    - create_post
