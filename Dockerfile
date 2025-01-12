@@ -26,5 +26,8 @@ ENV CHROME_BINARY_PATH=/usr/bin/chromium
 # Set display for xvfb
 ENV DISPLAY=:99
 
+# Expose the port
+EXPOSE 8000
+
 # Start script
 CMD ["python", "run.py"]

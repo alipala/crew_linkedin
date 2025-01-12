@@ -3,10 +3,13 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
+startCommand = "python run.py"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "on-failure"
 restartPolicyMaxRetries = 3
 
-[deploy.envs]
-CHROME_BINARY_PATH = "/usr/bin/chromium"
+[[deploy.railway.services]]
+name = "web"
+internal_port = "8000"
+protocol = "http"
