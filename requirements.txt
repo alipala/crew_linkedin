@@ -16,3 +16,4 @@ python-multipart
 hypercorn
 APScheduler
 pytz
+pytest
