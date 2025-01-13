@@ -5,12 +5,10 @@ buildCommand = "pip install -r requirements.txt"
 [deploy]
 startCommand = "python run.py"
 healthcheckPath = "/health"
-healthcheckTimeout = 300  
+healthcheckTimeout = 300
 restartPolicyType = "on-failure"
 restartPolicyMaxRetries = 3
-numReplicas = 2  
 
 [http]
-port = "8000"
-healthCheck = "/health"
-forwardPort = "8000"
+port = 8000
+forceSSL = true
