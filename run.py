@@ -12,7 +12,7 @@ import sys
 import os
 
 # Create FastAPI app
-app = FastAPI(title="CrewAI LinkedIn Bot")
+app = FastAPI(title="CrewAI LinkedIn Agent")
 
 # Include routers
 app.include_router(slack_router, prefix="/slack", tags=["slack"])
