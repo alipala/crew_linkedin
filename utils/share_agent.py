@@ -1,20 +1,71 @@
-from typing import Dict, Any
+# utils/share_agent.py
+
+from typing import Dict, Any, Optional, Union
 import requests
 import time
+import json
+from datetime import datetime
+from crewai.tools import BaseTool
+from pydantic import Field, BaseModel
 from config.settings import Config
 from utils.logger import logger
 
-class ShareAgent:
-    """Agent responsible for sharing content on LinkedIn"""
+class ShareRequest(BaseModel):
+    """Model for LinkedIn share request data"""
+    content: str
+    visibility: str = "connections"
+
+class ShareResponse(BaseModel):
+    """Model for LinkedIn share response data"""
+    success: bool
+    message: Optional[str] = None
+    error: Optional[str] = None
+    post_data: Optional[Dict[str, Any]] = None
+
+class ShareAgent(BaseTool):
+    """
+    Agent responsible for sharing content on LinkedIn.
+    Extends BaseTool to integrate with CrewAI framework.
+    """
     
-    def __init__(self):
-        self.access_token = Config.LINKEDIN_ACCESS_TOKEN
-        self.person_id = Config.LINKEDIN_PERSON_ID
-        self.max_retries = 3
-        self.base_delay = 1  # Base delay in seconds
+    name: str = "LinkedIn Share Tool"
+    description: str = "Shares content on LinkedIn using the LinkedIn API with proper formatting and error handling."
+    
+    # Define Pydantic fields with validation
+    access_token: str = Field(
+        default_factory=lambda: Config.LINKEDIN_ACCESS_TOKEN,
+        description="LinkedIn API access token"
+    )
+    person_id: str = Field(
+        default_factory=lambda: Config.LINKEDIN_PERSON_ID,
+        description="LinkedIn person ID for posting"
+    )
+    max_retries: int = Field(
+        default=3,
+        description="Maximum number of retry attempts"
+    )
+    base_delay: int = Field(
+        default=1,
+        description="Base delay (in seconds) for retry backoff"
+    )
+    
+    def _make_request(
+        self, 
+        headers: Dict[str, str], 
+        data: Dict[str, Any], 
+        retry: int = 0
+    ) -> Dict[str, Any]:
+        """
+        Make authenticated request to LinkedIn API with retry logic
         
-    def _make_request(self, headers: Dict[str, str], data: Dict[str, Any], retry: int = 0) -> Dict[str, Any]:
-        """Make request to LinkedIn API with retry logic"""
+        Args:
+            headers (Dict[str, str]): Request headers including auth
+            data (Dict[str, Any]): Post data to be shared
+            retry (int): Current retry attempt number
+            
+        Returns:
+            Dict[str, Any]: Response data with success status and details
+        """
         try:
             response = requests.post(
                 "https://api.linkedin.com/v2/ugcPosts",
@@ -23,7 +74,11 @@ class ShareAgent:
                 timeout=10
             )
             response.raise_for_status()
-            return {"success": True, "response": response.json()}
+            return {
+                "success": True,
+                "response": response.json(),
+                "timestamp": datetime.now().isoformat()
+            }
             
         except requests.exceptions.RequestException as e:
             if retry < self.max_retries:
@@ -33,17 +88,46 @@ class ShareAgent:
                 return self._make_request(headers, data, retry + 1)
             else:
                 logger.error(f"Max retries reached. Error: {str(e)}")
-                return {"success": False, "error": str(e)}
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat()
+                }
     
-    def share_post(self, content: str) -> Dict[str, Any]:
-        """Share content on LinkedIn"""
+    def _run(self, args: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Execute LinkedIn post sharing (CrewAI tool interface)
+        
+        Args:
+            args: Either a string content or dict with content and options
+                 If dict: {
+                     "content": str,
+                     "visibility": str ("connections" or "public")
+                 }
+                 
+        Returns:
+            Dict[str, Any]: Result of the sharing operation
+        """
         try:
+            # Parse input
+            if isinstance(args, str):
+                share_request = ShareRequest(content=args)
+            elif isinstance(args, dict):
+                share_request = ShareRequest(**args)
+            else:
+                raise ValueError("Invalid input format")
+            
+            # Validate credentials
             if not self.access_token or not self.person_id:
                 raise ValueError("LinkedIn credentials not configured")
-                
-            if not content or not content.strip():
+            
+            # Validate content
+            if not share_request.content.strip():
                 raise ValueError("Empty content provided")
-                
+            
+            # Prepare request
+            visibility_setting = "PUBLIC" if share_request.visibility.lower() == "public" else "CONNECTIONS"
+            
             headers = {
                 "Authorization": f"Bearer {self.access_token}",
                 "Content-Type": "application/json",
@@ -56,30 +140,62 @@ class ShareAgent:
                 "specificContent": {
                     "com.linkedin.ugc.ShareContent": {
                         "shareCommentary": {
-                            "text": content
+                            "text": share_request.content
                         },
                         "shareMediaCategory": "NONE"
                     }
                 },
                 "visibility": {
-                    "com.linkedin.ugc.MemberNetworkVisibility": "CONNECTIONS"
+                    "com.linkedin.ugc.MemberNetworkVisibility": visibility_setting
                 }
             }
             
-            logger.info("Attempting to share post on LinkedIn")
+            # Execute request
+            logger.info(f"Attempting to share post on LinkedIn with visibility: {visibility_setting}")
             result = self._make_request(headers, data)
             
+            # Handle response
             if result["success"]:
                 logger.info("Successfully shared post on LinkedIn")
-                return result
+                return ShareResponse(
+                    success=True,
+                    message="Post shared successfully",
+                    post_data=result["response"]
+                ).dict()
             else:
-                logger.error(f"Failed to share post: {result.get('error')}")
-                return result
+                error_msg = result.get("error", "Unknown error")
+                logger.error(f"Failed to share post: {error_msg}")
+                return ShareResponse(
+                    success=False,
+                    error=error_msg
+                ).dict()
                 
         except ValueError as e:
             logger.error(f"Validation error: {str(e)}")
-            return {"success": False, "error": str(e)}
+            return ShareResponse(
+                success=False,
+                error=str(e)
+            ).dict()
             
         except Exception as e:
             logger.error(f"Unexpected error sharing to LinkedIn: {str(e)}")
-            return {"success": False, "error": str(e)}
+            return ShareResponse(
+                success=False,
+                error=str(e)
+            ).dict()
+            
+    def share_post(self, content: str, visibility: str = "connections") -> Dict[str, Any]:
+        """
+        Direct interface for post sharing (backward compatibility)
+        
+        Args:
+            content (str): The content to be shared
+            visibility (str): Post visibility ("connections" or "public")
+            
+        Returns:
+            Dict[str, Any]: Result of the sharing operation
+        """
+        return self._run({
+            "content": content,
+            "visibility": visibility
+        })

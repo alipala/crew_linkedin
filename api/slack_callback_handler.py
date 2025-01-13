@@ -35,6 +35,7 @@ def verify_slack_signature(request_body: bytes, timestamp: str, signature: str) 
 
 @router.post("/interactive")
 async def slack_interactive(request: Request):
+    """Handle interactive actions from Slack"""
     try:
         # Get raw body and headers for verification
         body = await request.body()
@@ -73,27 +74,44 @@ async def slack_interactive(request: Request):
                 .strip()
             )
             
-            # Share post using ShareAgent
-            share_agent = ShareAgent()
-            result = share_agent.share_post(post_content)
-            
-            if result.get("success"):
-                logger.info(f"Post successfully shared by {user}")
+            try:
+                # Initialize ShareAgent
+                share_agent = ShareAgent()
+                
+                # Execute sharing
+                result = share_agent._run({
+                    "content": post_content,
+                    "visibility": "connections"
+                })
+                
+                if result.get("success"):
+                    logger.info(f"Post successfully shared by {user}")
+                    return JSONResponse(
+                        content={
+                            "response_type": "in_channel",
+                            "replace_original": True,
+                            "text": f"✅ Post approved and shared successfully by {user}!"
+                        }
+                    )
+                else:
+                    error_msg = result.get("error", "Unknown error")
+                    logger.error(f"Failed to share post: {error_msg}")
+                    return JSONResponse(
+                        content={
+                            "response_type": "in_channel",
+                            "replace_original": True,
+                            "text": f"❌ Error sharing post: {error_msg}"
+                        }
+                    )
+                    
+            except Exception as e:
+                logger.error(f"Error in share agent: {str(e)}")
                 return JSONResponse(
+                    status_code=500,
                     content={
                         "response_type": "in_channel",
                         "replace_original": True,
-                        "text": f"✅ Post approved and shared successfully by {user}!"
-                    }
-                )
-            else:
-                error_msg = result.get("error", "Unknown error")
-                logger.error(f"Failed to share post: {error_msg}")
-                return JSONResponse(
-                    content={
-                        "response_type": "in_channel",
-                        "replace_original": True,
-                        "text": f"❌ Error sharing post: {error_msg}"
+                        "text": f"❌ Internal error while sharing post: {str(e)}"
                     }
                 )
                 
