@@ -9,9 +9,14 @@ from utils.logger import logger
 from utils.notification_slack_tool import NotificationSlackTool
 import signal
 import sys
+import os
 
 # Create FastAPI app
-app = FastAPI(title="CrewAI LinkedIn Bot")
+app = FastAPI(
+    title="CrewAI LinkedIn Bot",
+    docs_url=None,  # Disable docs in production
+    redoc_url=None  # Disable redoc in production
+)
 
 # Include routers
 app.include_router(slack_router, prefix="/slack", tags=["slack"])
@@ -78,12 +83,19 @@ async def main():
             lambda s=sig: asyncio.create_task(shutdown(s, loop))
         )
 
-    # Configure Hypercorn
+    # Configure Hypercorn with environment-aware settings
     config = HypercornConfig()
-    config.bind = ["0.0.0.0:8000"]
+    port = int(os.getenv("PORT", "8000"))
+    config.bind = [f"0.0.0.0:{port}"]
     config.worker_class = "asyncio"
+    config.keep_alive_timeout = 120  # 2 minutes
+    config.read_timeout = 300        # 5 minutes
+    config.write_timeout = 300       # 5 minutes
+    config.graceful_timeout = 120    # 2 minutes
+    config.startup_timeout = 120     # 2 minutes
     
     try:
+        logger.info(f"Starting server on port {port}")
         await serve(app, config)
     except Exception as e:
         logger.error(f"Application error: {str(e)}")
