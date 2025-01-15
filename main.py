@@ -2,12 +2,13 @@ from utils.logger import logger
 import os
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
-from utils.linkedin_scrape_tool import LinkedInScrapeTool
+from utils.linkedin_google_search import LinkedInGoogleSearchTool
 from utils.notification_slack_tool import NotificationSlackTool
 from utils.models import LinkedInPostContent
 import ssl
 import logging
 import yaml
+import requests
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -30,17 +31,30 @@ class setupConfig():
     agents_config = configs['agents']
     tasks_config = configs['tasks']
 
+def test_api():
+    base_url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        'key': os.getenv('GOOGLE_SEARCH_API_KEY'),
+        'cx': os.getenv('GOOGLE_SEARCH_CX'),
+        'q': 'site:linkedin.com/posts/ LLM',
+        'num': 1
+    }
+    
+    response = requests.get(base_url, params=params)
+    print(f"Status Code: {response.status_code}")
+    print(f"Response: {json.dumps(response.json(), indent=2)}")
+
 def main():
     try:
         # Initialize tools
-        linkedin_tool = LinkedInScrapeTool()
+        linkedin_tool = LinkedInGoogleSearchTool()
         serper_tool = SerperDevTool()
         notification_slack_tool = NotificationSlackTool()
 
         # Initialize agents
         linkedin_scrape_agent = Agent(
             config=setupConfig.agents_config["linkedin_scrape_agent"],
-            tools=[linkedin_tool],
+            tools=[linkedin_tool, serper_tool],
             llm="gpt-4",
             verbose=True
         )
@@ -147,4 +161,5 @@ def main():
         raise
 
 if __name__ == "__main__":
+    test_api()
     main()
