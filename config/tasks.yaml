@@ -1,12 +1,11 @@
-scrape_linkedin_posts:
+search_linkedin_posts:
   description: >
-    Using the LinkedIn Scrape Tool, collect posts from the user's feed that are
-    related to AI topics (LLM, GenAI, RAG, etc.). Focus on posts from the last 4 days
-    and analyze their engagement metrics. Collect details including post content,
-    reactions, comments, shares, and matched AI topics.
+    Search for LinkedIn posts related to GenAI topics (LLM, GenAI, RAG, etc.) 
+    from the last 3 days using Google search. Focus on posts with high 
+    engagement metrics.
   expected_output: >
     A structured dataset containing:
-    - Post content and URLs
+    - Post URLs and content
     - Engagement metrics (reactions, comments, shares)
     - AI topic classifications
     - Timestamp information
