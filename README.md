@@ -1,10 +1,10 @@
-# LinkedIn Content Automation with CrewAI 🤖
+# Social Media Content Generation with CrewAI 🤖
 
-An intelligent automation system that leverages CrewAI to manage LinkedIn content creation and posting. The system uses AI agents to scrape trending topics, analyze engagement, generate content, and manage post scheduling.
+An intelligent agentic system that leverages CrewAI to manage social media content(LinkedIn) creation and posting. The system uses AI agents to scrape trending topics, analyze engagement, generate content, and manage post scheduling.
 
 ## Features 🌟
 
-- 🔍 **LinkedIn Feed Scraping**: Automatically scrapes AI-related content from LinkedIn
+- 🔍 **Find Most Attractive Linkedin Post**: Automatically finds topic related content from LinkedIn via Google Search API
 - 📊 **Engagement Analysis**: Analyzes post engagement metrics to identify trending topics
 - ✍️ **Content Generation**: Creates engaging LinkedIn posts based on analysis
 - 🤝 **Slack Integration**: Review and approve posts via Slack
@@ -14,7 +14,7 @@ An intelligent automation system that leverages CrewAI to manage LinkedIn conten
 ## Architecture 🏗️
 
 The system uses multiple specialized AI agents:
-- `LinkedInScrapeAgent`: Scrapes LinkedIn for trending AI content
+- `LinkedInPostSearchAgent`: Scrapes LinkedIn for trending AI content
 - `LinkedInInteractionAnalyzeAgent`: Analyzes engagement metrics
 - `BrainstormAgent`: Generates content ideas
 - `WebSearchAgent`: Researches supporting content
@@ -139,7 +139,7 @@ https://your-app-name.up.railway.app/slack/interactive
 
 1. **Scheduled Execution**:
    - The app runs daily at 8 AM CET
-   - Scrapes LinkedIn for AI-related content
+   - Does Google search on LinkedIn for given topic content
    - Generates and sends post to Slack for approval
 
 2. **On-Demand Execution**:
@@ -153,30 +153,6 @@ curl -X POST https://your-app-name.up.railway.app/api/execute \
    - Click "Approve" to publish
    - Click "Regenerate" for new content
 
-## Project Structure 📁
-
-```
-crew_linkedin/
-├── api/
-│   ├── __init__.py
-│   ├── endpoints.py
-│   └── slack_callback_handler.py
-├── config/
-│   └── settings.py
-├── utils/
-│   ├── __init__.py
-│   ├── logger.py
-│   ├── linkedin_scrape_tool.py
-│   ├── notification_slack_tool.py
-│   └── share_agent.py
-├── .env
-├── Dockerfile
-├── railway.toml
-├── requirements.txt
-├── run.py
-└── main.py
-```
-
 ## Contributing 🤝
 
 1. Fork the repository
@@ -185,31 +161,6 @@ crew_linkedin/
 4. Push to the branch
 5. Create a Pull Request
 
-## Troubleshooting 🔧
-
-### Common Issues
-
-1. **Chrome Driver Issues**:
-   - Ensure Chrome/Chromium is installed
-   - Check binary path in environment variables
-   - Verify Chrome version compatibility
-
-2. **LinkedIn Login Issues**:
-   - Check credentials in .env
-   - Verify no security challenges
-   - Try increasing delay between actions
-
-3. **Slack Integration Issues**:
-   - Verify webhook URL
-   - Check signing secret
-   - Ensure correct request URL in Slack app settings
-
-### Railway Specific
-
-1. **Deployment Failures**:
-   - Check Railway logs
-   - Verify environment variables
-   - Ensure Chrome installation in Dockerfile
 
 ## License 📄
 
