@@ -1,4 +1,4 @@
-linkedin_scrape_agent:
+linkedin_post_search_agent:
   role: "LinkedIn Content Explorer"
   goal: "Find highly-engaged LinkedIn posts about AI topics using Google search"
   backstory: >

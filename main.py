@@ -9,6 +9,7 @@ import ssl
 import logging
 import yaml
 import requests
+import json
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -52,8 +53,8 @@ def main():
         notification_slack_tool = NotificationSlackTool()
 
         # Initialize agents
-        linkedin_scrape_agent = Agent(
-            config=setupConfig.agents_config["linkedin_scrape_agent"],
+        linkedin_post_search_agent = Agent(
+            config=setupConfig.agents_config["linkedin_post_search_agent"],
             tools=[linkedin_tool, serper_tool],
             llm="gpt-4",
             verbose=True
@@ -92,15 +93,15 @@ def main():
         )
 
         # Initialize tasks
-        scrape_task = Task(
-            config=setupConfig.tasks_config["scrape_linkedin_posts"],
-            agent=linkedin_scrape_agent
+        search_task = Task(
+            config=setupConfig.tasks_config["search_linkedin_posts"],
+            agent=linkedin_post_search_agent
         )
 
         analyze_task = Task(
             config=setupConfig.tasks_config["analyze_engagement"],
             agent=linkedin_analyze_agent,
-            context=[scrape_task]
+            context=[search_task]
         )
 
         brainstorm_task = Task(
@@ -133,7 +134,7 @@ def main():
         # Create and execute crew
         crew = Crew(
             agents=[
-                linkedin_scrape_agent,
+                linkedin_post_search_agent,
                 linkedin_analyze_agent,
                 brainstorm_agent,
                 web_search_agent,
@@ -141,7 +142,7 @@ def main():
                 notification_agent
             ],
             tasks=[
-                scrape_task,
+                search_task,
                 analyze_task,
                 brainstorm_task,
                 web_search_task,
