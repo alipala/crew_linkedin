@@ -57,8 +57,17 @@ async def slack_interactive(request: Request):
         user = payload.get("user", {}).get("name", "unknown")
         
         if action == "approve":
-            # Extract post content from message
+            # Extract message blocks
             message_blocks = payload.get("message", {}).get("blocks", [])
+            
+            # Extract title from header block
+            header_block = next(
+                (block for block in message_blocks if block.get("type") == "header"), 
+                None
+            )
+            title = header_block.get("text", {}).get("text", "").replace("🚨 ", "") if header_block else ""
+            
+            # Extract content from section block
             content_block = next(
                 (block for block in message_blocks if block.get("type") == "section"), 
                 None
@@ -67,7 +76,7 @@ async def slack_interactive(request: Request):
             if not content_block:
                 raise HTTPException(status_code=400, detail="Could not find post content")
                 
-            post_content = (
+            content = (
                 content_block.get("text", {})
                 .get("text", "")
                 .replace("*Content:*\n", "")
@@ -78,9 +87,10 @@ async def slack_interactive(request: Request):
                 # Initialize ShareAgent
                 share_agent = ShareAgent()
                 
-                # Execute sharing
+                # Execute sharing with both title and content
                 result = share_agent._run({
-                    "content": post_content,
+                    "title": title,
+                    "content": content,
                     "visibility": "connections"
                 })
                 
@@ -123,10 +133,20 @@ async def slack_interactive(request: Request):
                 scheduler = request.app.state.scheduler
                 notification_tool = request.app.state.notification_tool
                 
-                # Send initial response to Slack using notification tool
+                # Extract the original message content
+                message_blocks = payload.get("message", {}).get("blocks", [])
+                
+                # Get original title from header block
+                header_block = next(
+                    (block for block in message_blocks if block.get("type") == "header"), 
+                    None
+                )
+                original_title = header_block.get("text", {}).get("text", "").replace("📝 ", "") if header_block else ""
+                
+                # Send initial notification about regeneration
                 notification_result = notification_tool._run({
                     "context": {
-                        "title": "Content Regeneration",
+                        "title": f"Regenerating: {original_title}",
                         "content": f"🔄 Content regeneration requested by {user}. Starting new generation process..."
                     }
                 })
