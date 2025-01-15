@@ -10,6 +10,7 @@ class NotificationSlackTool(BaseTool):
     description: str = "Sends notifications to a Slack channel."
 
     def _run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Send notifications to a Slack channel."""
         logger.info("NotificationAgent: Starting notification process")
         
         try:
@@ -20,28 +21,35 @@ class NotificationSlackTool(BaseTool):
             # Get the post data from context
             post_data = {}
             if isinstance(context, dict):
-                # Extract title and content from the LinkedInPostContent format
                 post_data = {
                     'title': context.get('title', 'New LinkedIn Post'),
                     'content': context.get('content', 'No content available')
                 }
 
-            # Format message for Slack
+            # Format content with proper spacing
+            content_paragraphs = post_data['content'].split('\n')
+            formatted_content = '\n\n'.join(p for p in content_paragraphs if p.strip())
+
+            # Format message for Slack with clear spacing
             message = {
                 "blocks": [
                     {
                         "type": "header",
                         "text": {
                             "type": "plain_text",
-                            "text": f"🚨 {post_data['title']}"
+                            "text": f"📝 {post_data['title']}"
                         }
                     },
                     {
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": f"*Content:*\n{post_data['content']}"
+                            "text": f"*Content:*\n{formatted_content}"
                         }
+                    },
+                    # Add a divider for better visual separation
+                    {
+                        "type": "divider"
                     },
                     {
                         "type": "actions",

@@ -9,6 +9,7 @@ from crewai.tools import BaseTool
 from pydantic import Field, BaseModel
 from config.settings import Config
 from utils.logger import logger
+import re
 
 class ShareRequest(BaseModel):
     """Model for LinkedIn share request data"""
@@ -94,17 +95,26 @@ class ShareAgent(BaseTool):
                     "timestamp": datetime.now().isoformat()
                 }
     
+    @staticmethod
+    def _to_bold(text: str) -> str:
+        """Convert regular text to Unicode bold characters for LinkedIn"""
+        normal = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+        bold = '𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵'
+        trans = str.maketrans(normal, bold)
+        return text.translate(trans)
+
     def _run(self, args: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
         Execute LinkedIn post sharing (CrewAI tool interface)
         
         Args:
             args: Either a string content or dict with content and options
-                 If dict: {
-                     "content": str,
-                     "visibility": str ("connections" or "public")
-                 }
-                 
+                If dict: {
+                    "content": str,
+                    "title": str,
+                    "visibility": str ("connections" or "public")
+                }
+                
         Returns:
             Dict[str, Any]: Result of the sharing operation
         """
@@ -113,7 +123,27 @@ class ShareAgent(BaseTool):
             if isinstance(args, str):
                 share_request = ShareRequest(content=args)
             elif isinstance(args, dict):
-                share_request = ShareRequest(**args)
+                # Clean and format content
+                title = args.get('title', '').strip()
+                content = args.get('content', '').strip()
+                visibility = args.get('visibility', 'connections')
+                
+                # Remove emoji-like codes from both title and content
+                cleaned_title = re.sub(r':[a-zA-Z_]+:', '', title)
+                cleaned_content = re.sub(r':[a-zA-Z_]+:', '', content)
+                
+                # Format LinkedIn post with bold Unicode title and proper paragraph spacing
+                formatted_content = f"{self._to_bold(cleaned_title)}\n\n{cleaned_content}"
+                
+                # Split content into paragraphs and rejoin with double newlines
+                # This ensures proper spacing between paragraphs
+                paragraphs = [p.strip() for p in formatted_content.split('\n') if p.strip()]
+                formatted_content = '\n\n'.join(paragraphs)
+                
+                share_request = ShareRequest(
+                    content=formatted_content,
+                    visibility=visibility
+                )
             else:
                 raise ValueError("Invalid input format")
             
@@ -161,41 +191,25 @@ class ShareAgent(BaseTool):
                     success=True,
                     message="Post shared successfully",
                     post_data=result["response"]
-                ).dict()
+                ).model_dump()
             else:
                 error_msg = result.get("error", "Unknown error")
                 logger.error(f"Failed to share post: {error_msg}")
                 return ShareResponse(
                     success=False,
                     error=error_msg
-                ).dict()
+                ).model_dump()
                 
         except ValueError as e:
             logger.error(f"Validation error: {str(e)}")
             return ShareResponse(
                 success=False,
                 error=str(e)
-            ).dict()
+            ).model_dump()
             
         except Exception as e:
             logger.error(f"Unexpected error sharing to LinkedIn: {str(e)}")
             return ShareResponse(
                 success=False,
                 error=str(e)
-            ).dict()
-            
-    def share_post(self, content: str, visibility: str = "connections") -> Dict[str, Any]:
-        """
-        Direct interface for post sharing (backward compatibility)
-        
-        Args:
-            content (str): The content to be shared
-            visibility (str): Post visibility ("connections" or "public")
-            
-        Returns:
-            Dict[str, Any]: Result of the sharing operation
-        """
-        return self._run({
-            "content": content,
-            "visibility": visibility
-        })
+            ).model_dump()
