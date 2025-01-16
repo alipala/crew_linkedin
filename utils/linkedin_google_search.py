@@ -198,12 +198,16 @@ class LinkedInGoogleSearchTool(BaseTool):
         Execute LinkedIn Google search with provided arguments
         
         Args:
-            args (Optional[Dict[str, Any]]): Arguments containing search parameters and topics
+            args: Optional dictionary containing arguments including topics
             
         Returns:
             Dict[str, Any]: Search results and metadata
         """
         try:
+            # Debug logging
+            logger.debug(f"Received args: {args}")
+            logger.debug(f"Args type: {type(args)}")
+            
             # Initialize search configuration
             config = SearchConfig(
                 days=args.get('days', 7),
@@ -213,36 +217,37 @@ class LinkedInGoogleSearchTool(BaseTool):
             
             # Initialize topics list
             topics = []
-
-            logger.debug(f"Received args: {args}")
-
+            
             if args:
-                logger.debug(f"Args type: {type(args)}")
-                # Try to get topics from args directly
-                if 'topics' in args:
-                    logger.debug(f"Topics from args: {args['topics']}")
-                    logger.debug(f"Topics type: {type(args['topics'])}")
-                    topics_input = args['topics']
-                    # Handle string input (comma-separated)
-                    if isinstance(topics_input, str):
-                        topics = [topic.strip() for topic in topics_input.split(',')]
-                    # Handle list input
-                    elif isinstance(topics_input, list):
-                        topics = topics_input
-                    else:
-                        logger.warning(f"Unexpected topics format: {type(topics_input)}")
+                # Try to get topics from task_kwargs first
+                if 'task_kwargs' in args:
+                    task_kwargs_topics = args['task_kwargs'].get('topics')
+                    if task_kwargs_topics:
+                        if isinstance(task_kwargs_topics, list):
+                            topics = task_kwargs_topics
+                        elif isinstance(task_kwargs_topics, str):
+                            topics = [t.strip() for t in task_kwargs_topics.split(',')]
                 
-                # Backup: Try to get topics from task_data if direct topics not found or empty
-                if not topics and 'task_data' in args:
+                # Then try to get topics from direct args
+                elif 'topics' in args:
+                    topics_input = args['topics']
+                    if isinstance(topics_input, list):
+                        topics = topics_input
+                    elif isinstance(topics_input, str):
+                        topics = [t.strip() for t in topics_input.split(',')]
+                
+                # Finally try task_data if no topics found yet
+                elif 'task_data' in args:
                     task_data = args['task_data'].get('search_linkedin_posts', {})
-                    topics = task_data.get('topics', [])
-                    
-            # Clean up topics: remove empty strings, None values, and whitespace
-            topics = [
-                topic.strip() 
-                for topic in topics 
-                if topic and isinstance(topic, str)
-            ]
+                    task_data_topics = task_data.get('topics')
+                    if task_data_topics:
+                        if isinstance(task_data_topics, list):
+                            topics = task_data_topics
+                        elif isinstance(task_data_topics, str):
+                            topics = [t.strip() for t in task_data_topics.split(',')]
+
+            # Clean and validate topics
+            topics = [topic for topic in topics if topic and isinstance(topic, str)]
             
             if not topics:
                 logger.warning("No valid topics found in arguments, using default topics")
@@ -278,7 +283,7 @@ class LinkedInGoogleSearchTool(BaseTool):
                 
                 # Respect API rate limits
                 time.sleep(2)
-                
+            
             # Remove duplicates based on URL
             unique_posts = {post['url']: post for post in all_posts}.values()
             posts_list = list(unique_posts)
