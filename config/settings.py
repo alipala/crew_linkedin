@@ -75,6 +75,7 @@ class Config:
     ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
     SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
+    SLACK_BOT_TOKEN = os.getenv('SLACK_BOT_TOKEN')
 
     API_KEY = os.getenv("API_KEY")
     @classmethod

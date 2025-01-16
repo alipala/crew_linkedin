@@ -1,40 +1,46 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from main import main as crew_main
+from utils.topic_manager import TopicManager
 from utils.logger import logger
 from datetime import datetime
 import pytz
 import asyncio
-import functools
+from typing import Optional, Dict, Any
+from main import main
 
 class CrewScheduler:
     """Handles scheduled and on-demand execution of the CrewAI workflow"""
     
     def __init__(self):
+        self.topic_manager = TopicManager()
         self.scheduler = AsyncIOScheduler()
         self.is_job_running = False
         
-    async def execute_crew_workflow(self):
-        """Execute the CrewAI workflow"""
-        if self.is_job_running:
-            logger.warning("Job already running, skipping execution")
-            return
-            
+    async def execute_crew_workflow(self, custom_inputs: Optional[Dict[str, Any]] = None) -> None:
         try:
+            if self.is_job_running:
+                logger.warning("Job already running, skipping execution")
+                return
+                
             self.is_job_running = True
-            logger.info("Starting CrewAI workflow execution")
             
-            # Run crew_main in a thread pool since it's not async
-            loop = asyncio.get_running_loop()
-            partial_crew = functools.partial(crew_main)
-            await loop.run_in_executor(None, partial_crew)
-            
+            try:
+                # Get topics from custom inputs or topic manager
+                topics = (custom_inputs or {}).get('topics')
+                
+                # Execute crew workflow using the main function
+                result = await asyncio.to_thread(main, custom_topics=topics)
+                
+                logger.info(f"Crew execution completed with topics: {topics}")
+                return result
+                
+            finally:
+                self.is_job_running = False
+                
         except Exception as e:
-            logger.error(f"Error in workflow execution: {str(e)}")
-            raise
-            
-        finally:
+            logger.error(f"Error executing crew workflow: {e}")
             self.is_job_running = False
+            raise
             
     def schedule_daily_job(self):
         """Schedule daily job at 8 AM CET"""

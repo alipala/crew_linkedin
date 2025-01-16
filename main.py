@@ -5,32 +5,35 @@ from crewai_tools import SerperDevTool
 from utils.linkedin_google_search import LinkedInGoogleSearchTool
 from utils.notification_slack_tool import NotificationSlackTool
 from utils.models import LinkedInPostContent
+from utils.topic_manager import TopicManager
 import ssl
 import logging
 import yaml
 import requests
 import json
+from typing import Optional, Dict, Any, List
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 logging.basicConfig(level=logging.DEBUG)
 
-class setupConfig():
+class SetupConfig:
     # Define file paths for YAML configurations
     files = {
         'agents': 'config/agents.yaml',
         'tasks': 'config/tasks.yaml'
     }
 
-    # Load configurations from YAML files
-    configs = {}
-    for config_type, file_path in files.items():
-        with open(file_path, 'r') as file:
-            configs[config_type] = yaml.safe_load(file)
+    def __init__(self):
+        # Load configurations from YAML files
+        self.configs = {}
+        for config_type, file_path in self.files.items():
+            with open(file_path, 'r') as file:
+                self.configs[config_type] = yaml.safe_load(file)
 
-    # Assign loaded configurations to specific variables
-    agents_config = configs['agents']
-    tasks_config = configs['tasks']
+        # Assign loaded configurations to instance variables
+        self.agents_config = self.configs['agents']
+        self.tasks_config = self.configs['tasks']
 
 def test_api():
     base_url = "https://www.googleapis.com/customsearch/v1"
@@ -45,7 +48,8 @@ def test_api():
     print(f"Status Code: {response.status_code}")
     print(f"Response: {json.dumps(response.json(), indent=2)}")
 
-def main():
+def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew:
+    """Create and configure the CrewAI crew with agents and tasks"""
     try:
         # Initialize tools
         linkedin_tool = LinkedInGoogleSearchTool()
@@ -54,39 +58,39 @@ def main():
 
         # Initialize agents
         linkedin_post_search_agent = Agent(
-            config=setupConfig.agents_config["linkedin_post_search_agent"],
+            config=config.agents_config["linkedin_post_search_agent"],
             tools=[linkedin_tool, serper_tool],
             llm="gpt-4",
             verbose=True
         )
 
         linkedin_analyze_agent = Agent(
-            config=setupConfig.agents_config["linkedin_interaction_analyze_agent"],
+            config=config.agents_config["linkedin_interaction_analyze_agent"],
             llm="gpt-4",
             verbose=True
         )
 
         brainstorm_agent = Agent(
-            config=setupConfig.agents_config["brainstorm_agent"],
+            config=config.agents_config["brainstorm_agent"],
             llm="gpt-4",
             verbose=True
         )
 
         web_search_agent = Agent(
-            config=setupConfig.agents_config["web_search_agent"],
+            config=config.agents_config["web_search_agent"],
             tools=[serper_tool],
             llm="gpt-3.5-turbo",
             verbose=True
         )
 
         post_create_agent = Agent(
-            config=setupConfig.agents_config["post_create_agent"],
+            config=config.agents_config["post_create_agent"],
             llm="gpt-4",
             verbose=True
         )
 
         notification_agent = Agent(
-            config=setupConfig.agents_config["notification_agent"],
+            config=config.agents_config["notification_agent"],
             tools=[notification_slack_tool],
             llm="gpt-3.5-turbo",
             verbose=True
@@ -94,30 +98,30 @@ def main():
 
         # Initialize tasks
         search_task = Task(
-            config=setupConfig.tasks_config["search_linkedin_posts"],
+            config=config.tasks_config["search_linkedin_posts"],
             agent=linkedin_post_search_agent
         )
 
         analyze_task = Task(
-            config=setupConfig.tasks_config["analyze_engagement"],
+            config=config.tasks_config["analyze_engagement"],
             agent=linkedin_analyze_agent,
             context=[search_task]
         )
 
         brainstorm_task = Task(
-            config=setupConfig.tasks_config["generate_ideas"],
+            config=config.tasks_config["generate_ideas"],
             agent=brainstorm_agent,
             context=[analyze_task]
         )
 
         web_search_task = Task(
-            config=setupConfig.tasks_config["conduct_web_search"],
+            config=config.tasks_config["conduct_web_search"],
             agent=web_search_agent,
             context=[brainstorm_task]
         )
 
         create_post_task = Task(
-            config=setupConfig.tasks_config["create_post"],
+            config=config.tasks_config["create_post"],
             agent=post_create_agent,
             context=[web_search_task],
             output_pydantic=LinkedInPostContent,
@@ -125,13 +129,13 @@ def main():
         )
 
         notify_user_task = Task(
-            config=setupConfig.tasks_config["notify_user"],
+            config=config.tasks_config["notify_user"],
             agent=notification_agent,
             context=[create_post_task],
             verbose=True
-            )
+        )
 
-        # Create and execute crew
+        # Create crew
         crew = Crew(
             agents=[
                 linkedin_post_search_agent,
@@ -153,14 +157,36 @@ def main():
             verbose=True
         )
 
-        # Define topics
-        topics = [
-            "How messi become a superstar",
-            "What is the best goals of Messi",
-            "How the Messi improve his talent?"
-        ]
+        return crew
 
+    except Exception as e:
+        logger.error(f"Error creating crew: {e}")
+        raise
+
+def main(custom_topics: Optional[List[str]] = None) -> Dict[str, Any]:
+    """
+    Main execution function that can accept custom topics
+    
+    Args:
+        custom_topics: Optional list of topics to override defaults
+        
+    Returns:
+        Dict containing execution results
+    """
+    try:
+        # Initialize configuration
+        config = SetupConfig()
+        
+        # Get topics from parameter or topic manager
+        topic_manager = TopicManager()
+        topics = custom_topics or topic_manager.get_current_topics()
+        
+        logger.info(f"Executing crew with topics: {topics}")
+        
+        # Create and execute crew
+        crew = create_crew(config)
         result = crew.kickoff(inputs={'topics': topics})
+        
         logger.info("Crew execution completed successfully.")
         return result
 

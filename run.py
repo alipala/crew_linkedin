@@ -2,7 +2,8 @@ import asyncio
 from hypercorn.config import Config as HypercornConfig
 from hypercorn.asyncio import serve
 from fastapi import FastAPI, Request
-from api.slack_callback_handler import router as slack_router
+from api.slack_callback_handler import router as slack_callback_router
+from api.slack_message_handler import router as slack_message_router
 from api.endpoints import router as api_router
 from scheduler import CrewScheduler
 from utils.logger import logger
@@ -14,8 +15,8 @@ import os
 # Create FastAPI app
 app = FastAPI(title="CrewAI LinkedIn Agent")
 
-# Include routers
-app.include_router(slack_router, prefix="/slack", tags=["slack"])
+app.include_router(slack_message_router, prefix="/slack", tags=["slack"])  # Changed this line
+app.include_router(slack_callback_router, prefix="/slack/interactive", tags=["slack"])
 app.include_router(api_router, prefix="/api", tags=["api"])
 
 # Create Slack notification tool for state
