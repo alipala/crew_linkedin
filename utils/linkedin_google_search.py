@@ -210,8 +210,8 @@ class LinkedInGoogleSearchTool(BaseTool):
             
             # Initialize search configuration
             config = SearchConfig(
-                days=args.get('days', 7),
-                max_topics=args.get('max_topics', 5),
+                days=args.get('days', 3),
+                max_topics=args.get('max_topics', 10),
                 results_per_topic=args.get('results_per_topic', 10)
             )
             
