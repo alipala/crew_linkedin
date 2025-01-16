@@ -153,7 +153,14 @@ def main():
             verbose=True
         )
 
-        result = crew.kickoff()
+        # Define topics
+        topics = [
+            "How messi become a superstar",
+            "What is the best goals of Messi",
+            "How the Messi improve his talent?"
+        ]
+
+        result = crew.kickoff(inputs={'topics': topics})
         logger.info("Crew execution completed successfully.")
         return result
 
