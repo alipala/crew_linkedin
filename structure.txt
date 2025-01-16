@@ -2,19 +2,29 @@
 ├── README.md
 ├── __init__.py
 ├── agents
-│   └── linkedin_scraper.py
 ├── api
 │   ├── endpoints.py
-│   └── slack_callback_handler.py
+│   ├── slack_callback_handler.py
+│   └── slack_message_handler.py
 ├── config
 │   ├── __init__.py
 │   ├── agents.yaml
 │   ├── settings.py
 │   └── tasks.yaml
 ├── data
-│   └── output
-│       ├── linkedin_posts_20250113_230233.json
-│       └── linkedin_posts_20250113_231243.json
+│   ├── output
+│   │   ├── linkedin_posts_20250115_140508.json
+│   │   ├── linkedin_posts_20250115_215213.json
+│   │   ├── linkedin_posts_20250115_220804.json
+│   │   ├── linkedin_posts_20250115_221659.json
+│   │   ├── linkedin_posts_20250115_222826.json
+│   │   ├── linkedin_posts_20250115_223247.json
+│   │   ├── linkedin_posts_20250115_224339.json
+│   │   ├── linkedin_posts_20250115_235322.json
+│   │   ├── linkedin_posts_20250116_011336.json
+│   │   └── linkedin_posts_20250116_012644.json
+│   └── topics
+│       └── current_topics.json
 ├── logs
 │   └── app.log
 ├── main.py
@@ -33,12 +43,13 @@
 │   └── verify_config.py
 └── utils
     ├── generate_app_key.py
-    ├── linkedin_scrape_tool.py
+    ├── linkedin_google_search.py
     ├── logger.py
     ├── models.py
     ├── notification_slack_tool.py
     ├── notification_utils.py
     ├── share_agent.py
-    └── test_mail.py
+    ├── test_mail.py
+    └── topic_manager.py
 
-9 directories, 33 files
+10 directories, 43 files

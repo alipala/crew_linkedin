@@ -1,6 +1,6 @@
 linkedin_post_search_agent:
-  role: "LinkedIn Content Explorer"
-  goal: "Find highly-engaged LinkedIn posts about AI topics using Google search"
+  role: LinkedIn Content Explorer
+  goal: Find highly-engaged LinkedIn posts about {topics} using Google search
   backstory: >
     You are an expert at discovering trending AI content on LinkedIn through 
     advanced search techniques. You analyze engagement patterns and identify 

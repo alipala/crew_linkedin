@@ -17,3 +17,4 @@ hypercorn
 APScheduler
 pytz
 pytest
+slack-sdk
