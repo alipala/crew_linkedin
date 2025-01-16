@@ -195,13 +195,13 @@ class LinkedInGoogleSearchTool(BaseTool):
 
     def _run(self, args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute LinkedIn post search and data collection
+        Execute LinkedIn Google search with provided arguments
         
         Args:
-            args (Optional[Dict[str, Any]]): Arguments including topics and search config
+            args (Optional[Dict[str, Any]]): Arguments containing search parameters and topics
             
         Returns:
-            Dict[str, Any]: Search results and status
+            Dict[str, Any]: Search results and metadata
         """
         try:
             # Initialize search configuration
@@ -211,11 +211,44 @@ class LinkedInGoogleSearchTool(BaseTool):
                 results_per_topic=args.get('results_per_topic', 10)
             )
             
-            # Get topics from args or use defaults
-            topics = args.get('topics', []) if args else []
+            # Initialize topics list
+            topics = []
+
+            logger.debug(f"Received args: {args}")
+
+            if args:
+                logger.debug(f"Args type: {type(args)}")
+                # Try to get topics from args directly
+                if 'topics' in args:
+                    logger.debug(f"Topics from args: {args['topics']}")
+                    logger.debug(f"Topics type: {type(args['topics'])}")
+                    topics_input = args['topics']
+                    # Handle string input (comma-separated)
+                    if isinstance(topics_input, str):
+                        topics = [topic.strip() for topic in topics_input.split(',')]
+                    # Handle list input
+                    elif isinstance(topics_input, list):
+                        topics = topics_input
+                    else:
+                        logger.warning(f"Unexpected topics format: {type(topics_input)}")
+                
+                # Backup: Try to get topics from task_data if direct topics not found or empty
+                if not topics and 'task_data' in args:
+                    task_data = args['task_data'].get('search_linkedin_posts', {})
+                    topics = task_data.get('topics', [])
+                    
+            # Clean up topics: remove empty strings, None values, and whitespace
+            topics = [
+                topic.strip() 
+                for topic in topics 
+                if topic and isinstance(topic, str)
+            ]
+            
             if not topics:
-                logger.warning("No topics provided, using default topics")
+                logger.warning("No valid topics found in arguments, using default topics")
                 topics = self.default_topics
+            else:
+                logger.info(f"Using provided topics: {topics}")
 
             # Validate credentials
             self._validate_credentials()
@@ -224,6 +257,7 @@ class LinkedInGoogleSearchTool(BaseTool):
             processed_topics = 0
             successful_topics = []
             
+            # Execute search for each topic
             for topic in topics:
                 if processed_topics >= config.max_topics:
                     break
@@ -239,10 +273,12 @@ class LinkedInGoogleSearchTool(BaseTool):
                     all_posts.extend(posts)
                     successful_topics.append(topic)
                     processed_topics += 1
+                else:
+                    logger.warning(f"No posts found for topic: {topic}")
                 
                 # Respect API rate limits
                 time.sleep(2)
-            
+                
             # Remove duplicates based on URL
             unique_posts = {post['url']: post for post in all_posts}.values()
             posts_list = list(unique_posts)
@@ -256,15 +292,19 @@ class LinkedInGoogleSearchTool(BaseTool):
             # Save to JSON
             output_file = self._save_posts_to_json(posts_list, successful_topics)
             
-            return {
+            result = {
                 'status': 'success',
                 'topics_searched': processed_topics,
                 'successful_topics': successful_topics,
                 'posts_found': len(posts_list),
                 'output_file': output_file,
                 'posts': posts_list,
-                'config': config.dict()
+                'config': config.dict(),
+                'topics_used': topics
             }
+            
+            logger.info(f"Search completed successfully with topics: {topics}")
+            return result
             
         except Exception as e:
             logger.error(f"Search operation failed: {str(e)}")

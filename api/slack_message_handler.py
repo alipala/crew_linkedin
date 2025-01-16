@@ -103,9 +103,9 @@ async def handle_message_event(event_data: Dict[str, Any], request: Request) -> 
             scheduler = request.app.state.scheduler
             current_topics = topic_manager.get_current_topics()
             
-            # Trigger workflow with current topics
+            # Simplified input structure
             await scheduler.execute_crew_workflow({
-                'topics': current_topics
+                'topics': current_topics  # Just pass topics directly
             })
             
             return {
@@ -129,72 +129,98 @@ async def handle_message_event(event_data: Dict[str, Any], request: Request) -> 
 
 @router.post("/events")
 async def slack_events(request: Request):
-   """Handle Slack events"""
-   try:
-       # Get raw body
-       body = await request.body()
-       body_str = body.decode()
-       logger.debug(f"Received body: {body_str}")
-       
-       # Parse JSON body
-       event_data = json.loads(body_str)
-       
-       # Handle URL verification without signature check
-       if event_data.get('type') == 'url_verification':
-           challenge = event_data.get('challenge')
-           logger.info(f"Handling URL verification. Challenge: {challenge}")
-           return Response(
-               content=json.dumps({"challenge": challenge}),
-               media_type="application/json"
-           )
-           
-       # For other events, verify signature
-       timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
-       signature = request.headers.get("X-Slack-Signature", "")
-       
-       logger.debug(f"Headers - Timestamp: {timestamp}, Signature: {signature}")
-       
-       if not verify_slack_signature(body, timestamp, signature):
-           logger.error("Invalid Slack signature")
-           raise HTTPException(status_code=401, detail="Invalid request signature")
+    """Handle Slack events with deduplication and improved error handling"""
+    try:
+        # Get raw body
+        body = await request.body()
+        body_str = body.decode()
+        logger.debug(f"Received body: {body_str}")
+        
+        # Parse JSON body
+        event_data = json.loads(body_str)
+        
+        # Handle URL verification without signature check
+        if event_data.get('type') == 'url_verification':
+            challenge = event_data.get('challenge')
+            logger.info(f"Handling URL verification. Challenge: {challenge}")
+            return Response(
+                content=json.dumps({"challenge": challenge}),
+                media_type="application/json"
+            )
+            
+        # For other events, verify signature
+        timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
+        signature = request.headers.get("X-Slack-Signature", "")
+        
+        logger.debug(f"Headers - Timestamp: {timestamp}, Signature: {signature}")
+        
+        if not verify_slack_signature(body, timestamp, signature):
+            logger.error("Invalid Slack signature")
+            raise HTTPException(status_code=401, detail="Invalid request signature")
 
-       # Handle message events
-       if event_data.get('event', {}).get('type') == 'message':
-           response = await handle_message_event(event_data, request)
-           if response:
-               # Send message back to Slack
-               slack_response = requests.post(
-                   'https://slack.com/api/chat.postMessage',
-                   headers={
-                       'Authorization': f'Bearer {Config.SLACK_BOT_TOKEN}',
-                       'Content-Type': 'application/json'
-                   },
-                   json=response
-               )
-               
-               if not slack_response.ok:
-                   logger.error(f"Error sending Slack message: {slack_response.text}")
-                   raise HTTPException(
-                       status_code=500,
-                       detail="Failed to send Slack message"
-                   )
-                   
-               logger.info("Successfully sent Slack message")
-               
-           return Response(
-               content=json.dumps({'ok': True}),
-               media_type="application/json"
-           )
-           
-       return Response(
-           content=json.dumps({'ok': True}),
-           media_type="application/json"
-       )
-           
-   except json.JSONDecodeError as e:
-       logger.error(f"Invalid JSON: {e}")
-       raise HTTPException(status_code=400, detail="Invalid JSON payload")
-       
-   except Exception as e:
-       logger.error(f"Error in Slack events endpoint: {e}")
-       raise HTTPException(status_code=500, detail=str(e))
+        # Deduplication check
+        event_id = event_data.get('event_id')
+        if not hasattr(request.app.state, 'processed_events'):
+            request.app.state.processed_events = set()
+            
+        if event_id in request.app.state.processed_events:
+            logger.info(f"Duplicate event {event_id} - skipping processing")
+            return Response(
+                content=json.dumps({'ok': True}),
+                media_type="application/json"
+            )
+            
+        # Store event_id for deduplication
+        request.app.state.processed_events.add(event_id)
+        
+        # Cleanup old events (keep last 1000)
+        if len(request.app.state.processed_events) > 1000:
+            request.app.state.processed_events = set(list(request.app.state.processed_events)[-1000:])
+
+        # Handle message events
+        if event_data.get('event', {}).get('type') == 'message':
+            # Ignore bot messages to prevent loops
+            if event_data.get('event', {}).get('bot_id'):
+                return Response(
+                    content=json.dumps({'ok': True}),
+                    media_type="application/json"
+                )
+                
+            response = await handle_message_event(event_data, request)
+            if response:
+                # Send message back to Slack
+                slack_response = requests.post(
+                    'https://slack.com/api/chat.postMessage',
+                    headers={
+                        'Authorization': f'Bearer {Config.SLACK_BOT_TOKEN}',
+                        'Content-Type': 'application/json'
+                    },
+                    json=response
+                )
+                
+                if not slack_response.ok:
+                    logger.error(f"Error sending Slack message: {slack_response.text}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Failed to send Slack message"
+                    )
+                    
+                logger.info("Successfully sent Slack message")
+                
+            return Response(
+                content=json.dumps({'ok': True}),
+                media_type="application/json"
+            )
+            
+        return Response(
+            content=json.dumps({'ok': True}),
+            media_type="application/json"
+        )
+            
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON: {e}")
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+        
+    except Exception as e:
+        logger.error(f"Error in Slack events endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -51,6 +51,8 @@ def test_api():
 def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew:
     """Create and configure the CrewAI crew with agents and tasks"""
     try:
+        logger.debug(f"Creating crew with topics: {topics}")
+        logger.debug(f"Topics type: {type(topics)}")
         # Initialize tools
         linkedin_tool = LinkedInGoogleSearchTool()
         serper_tool = SerperDevTool()
@@ -164,15 +166,6 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
         raise
 
 def main(custom_topics: Optional[List[str]] = None) -> Dict[str, Any]:
-    """
-    Main execution function that can accept custom topics
-    
-    Args:
-        custom_topics: Optional list of topics to override defaults
-        
-    Returns:
-        Dict containing execution results
-    """
     try:
         # Initialize configuration
         config = SetupConfig()
@@ -181,11 +174,18 @@ def main(custom_topics: Optional[List[str]] = None) -> Dict[str, Any]:
         topic_manager = TopicManager()
         topics = custom_topics or topic_manager.get_current_topics()
         
+        # Format topics for interpolation
+        formatted_topics = ', '.join(topics) if isinstance(topics, list) else topics
+        
         logger.info(f"Executing crew with topics: {topics}")
         
-        # Create and execute crew
+        # Create crew
         crew = create_crew(config)
-        result = crew.kickoff(inputs={'topics': topics})
+        
+        # Pass topics in the correct format for interpolation
+        result = crew.kickoff(inputs={
+            'topics': formatted_topics
+        })
         
         logger.info("Crew execution completed successfully.")
         return result

@@ -1,6 +1,6 @@
 search_linkedin_posts:
   description: >
-    Search for LinkedIn posts related to  {topics} 
+    Search for LinkedIn posts related to {topics} 
     from the last 3 days using Google search. Focus on posts with high 
     engagement metrics.
   expected_output: >

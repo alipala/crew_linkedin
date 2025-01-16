@@ -33,12 +33,14 @@ def verify_slack_signature(request_body: bytes, timestamp: str, signature: str) 
     )
     return hmac.compare_digest(computed_signature, signature)
 
-@router.post("/interactive")
+@router.post("/")
 async def slack_interactive(request: Request):
     """Handle interactive actions from Slack"""
     try:
+        logger.info(f"Received interactive payload at {request.url.path}")
         # Get raw body and headers for verification
         body = await request.body()
+        logger.debug(f"Raw body: {body.decode()}")
         timestamp = request.headers.get("X-Slack-Request-Timestamp", "")
         signature = request.headers.get("X-Slack-Signature", "")
         
@@ -183,5 +185,5 @@ async def slack_interactive(request: Request):
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
         
     except Exception as e:
-        logger.error(f"Error processing Slack interaction: {e}")
+        logger.error(f"Interactive endpoint error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
