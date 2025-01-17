@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union, ClassVar
 from datetime import datetime, timedelta
 import re
 import json
@@ -8,8 +8,6 @@ import time
 from utils.logger import logger
 from pydantic import Field, BaseModel
 import os
-from typing import ClassVar
-
 
 class SearchConfig(BaseModel):
     """Configuration model for search parameters"""
@@ -17,6 +15,12 @@ class SearchConfig(BaseModel):
     max_topics: int = Field(default=5, description="Maximum number of topics to search")
     results_per_topic: int = Field(default=10, description="Number of results per topic")
 
+class SearchInput(BaseModel):
+    """Model for search input validation"""
+    topics: Union[List[str], str]
+    days: int = 3
+    max_topics: int = 10
+    results_per_topic: int = 10
 
 class LinkedInGoogleSearchTool(BaseTool):
     """Tool for searching LinkedIn posts using Google Custom Search API"""
@@ -48,6 +52,59 @@ class LinkedInGoogleSearchTool(BaseTool):
             raise ValueError("Google Search API key not configured")
         if not self.cx:
             raise ValueError("Google Custom Search Engine ID not configured")
+
+    def _normalize_topics(self, topics_input: Union[str, List[str], Dict[str, Any]]) -> List[str]:
+        """Normalize topics input into a list of strings"""
+        if isinstance(topics_input, str):
+            # If it's a string, split by comma or treat as single topic
+            return [t.strip() for t in topics_input.split(',')] if ',' in topics_input else [topics_input.strip()]
+        elif isinstance(topics_input, list):
+            # If it's already a list, ensure all elements are strings
+            return [str(t).strip() for t in topics_input if t]
+        elif isinstance(topics_input, dict):
+            # Try to extract topics from dictionary structure
+            if 'topics' in topics_input:
+                return self._normalize_topics(topics_input['topics'])
+            elif 'task_kwargs' in topics_input and 'topics' in topics_input['task_kwargs']:
+                return self._normalize_topics(topics_input['task_kwargs']['topics'])
+        return []
+
+    def _extract_topics_from_args(self, args: Any) -> List[str]:
+        """Extract topics from various input formats"""
+        try:
+            if args is None:
+                return []
+
+            # If args is a string, try to parse it as JSON first
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    return [args.strip()]
+
+            # Handle dictionary input
+            if isinstance(args, dict):
+                # Check all possible paths where topics might be stored
+                possible_paths = [
+                    args.get('topics'),
+                    args.get('task_kwargs', {}).get('topics'),
+                    args.get('task_data', {}).get('search_linkedin_posts', {}).get('topics'),
+                ]
+                
+                for path in possible_paths:
+                    if path:
+                        return self._normalize_topics(path)
+
+            # Handle list input
+            if isinstance(args, list):
+                return self._normalize_topics(args)
+
+            logger.warning(f"Couldn't extract topics from args: {args}")
+            return []
+
+        except Exception as e:
+            logger.error(f"Error extracting topics: {str(e)}")
+            return []
 
     def _search_linkedin_posts(self, topic: str, days: int, max_results: int = 10) -> List[Dict]:
         """
@@ -82,7 +139,7 @@ class LinkedInGoogleSearchTool(BaseTool):
                     'url': item.get('link'),
                     'title': item.get('title', ''),
                     'text': item.get('snippet', ''),
-                    'matched_ai_topics': [topic],
+                    'matched_topics': [topic],
                     'scraped_at': datetime.now().isoformat(),
                     'metrics': self._extract_metrics(item.get('snippet', '')),
                     'date': self._extract_date(item.get('snippet', ''))
@@ -114,7 +171,7 @@ class LinkedInGoogleSearchTool(BaseTool):
             'shares': 0
         }
         
-        # Add regex patterns to extract metrics if they appear in the text
+        # Add regex patterns to extract metrics
         patterns = {
             'reactions': r'(\d+)\s*(?:reaction|reactions|like|likes)',
             'comments': r'(\d+)\s*(?:comment|comments)',
@@ -193,110 +250,79 @@ class LinkedInGoogleSearchTool(BaseTool):
             logger.error(f"Error saving posts to JSON: {str(e)}")
             return None
 
-    def _run(self, args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _run(self, args: Any = None) -> Dict[str, Any]:
         """
         Execute LinkedIn Google search with provided arguments
         
         Args:
-            args: Optional dictionary containing arguments including topics
+            args: Various formats of input containing topics and search parameters
             
         Returns:
             Dict[str, Any]: Search results and metadata
         """
         try:
-            # Debug logging
-            logger.debug(f"Received args: {args}")
-            logger.debug(f"Args type: {type(args)}")
-            
-            # Validate credentials first
-            self._validate_credentials()
-            
-            # Initialize search configuration
-            config = SearchConfig(
-                days=args.get('days', 3),
-                max_topics=args.get('max_topics', 10),
-                results_per_topic=args.get('results_per_topic', 10)
-            )
-            
-            # Extract topics with better error handling
-            topics = []
-            if isinstance(args, dict):
-                # Try different ways to get topics
-                if 'topics' in args:
-                    topics = args['topics']
-                elif 'task_kwargs' in args and isinstance(args['task_kwargs'], dict):
-                    topics = args['task_kwargs'].get('topics', [])
-                elif 'task_data' in args and isinstance(args['task_data'], dict):
-                    topics = args['task_data'].get('search_linkedin_posts', {}).get('topics', [])
-                
-                # Convert string to list if necessary
-                if isinstance(topics, str):
-                    topics = [t.strip() for t in topics.split(',')]
-                elif not isinstance(topics, list):
-                    topics = []
-            
-            # Ensure topics is a list and clean
-            topics = [t for t in topics if isinstance(t, str) and t.strip()]
+            # Extract and normalize topics
+            topics = self._extract_topics_from_args(args)
             
             if not topics:
-                logger.warning("No valid topics found in arguments, using default topics")
+                logger.warning("No topics found in input, using defaults")
                 topics = self.default_topics
-            else:
-                logger.info(f"Using provided topics: {topics}")
-                
+
+            logger.info(f"Searching with normalized topics: {topics}")
+
+            # Validate credentials
+            self._validate_credentials()
+
+            # Validate input using Pydantic model
+            search_input = SearchInput(
+                topics=topics,
+                days=args.get('days', 3) if isinstance(args, dict) else 3,
+                max_topics=args.get('max_topics', 10) if isinstance(args, dict) else 10,
+                results_per_topic=args.get('results_per_topic', 10) if isinstance(args, dict) else 10
+            )
+
+            # Process each topic
             all_posts = []
-            processed_topics = 0
             successful_topics = []
-            
-            # Execute search for each topic
-            for topic in topics:
-                if processed_topics >= config.max_topics:
-                    break
-                    
-                logger.info(f"Searching for topic: {topic}")
-                posts = self._search_linkedin_posts(
-                    topic,
-                    config.days,
-                    config.results_per_topic
-                )
-                
-                if posts:
-                    all_posts.extend(posts)
-                    successful_topics.append(topic)
-                    processed_topics += 1
-                else:
-                    logger.warning(f"No posts found for topic: {topic}")
-                
-                # Respect API rate limits
-                time.sleep(2)
-            
-            # Remove duplicates based on URL
+
+            for topic in search_input.topics:
+                logger.info(f"Processing topic: {topic}")
+                try:
+                    posts = self._search_linkedin_posts(
+                        topic,
+                        search_input.days,
+                        search_input.results_per_topic
+                    )
+                    if posts:
+                        all_posts.extend(posts)
+                        successful_topics.append(topic)
+                except Exception as e:
+                    logger.error(f"Error processing topic '{topic}': {str(e)}")
+
+            # Process results
             unique_posts = {post['url']: post for post in all_posts}.values()
-            posts_list = list(unique_posts)
-            
-            # Sort by engagement (total of reactions, comments, and shares)
-            posts_list.sort(
+            posts_list = sorted(
+                list(unique_posts),
                 key=lambda x: sum(x['metrics'].values()),
                 reverse=True
             )
-            
+
             # Save to JSON
             output_file = self._save_posts_to_json(posts_list, successful_topics)
-            
+
             result = {
                 'status': 'success',
-                'topics_searched': processed_topics,
+                'topics_searched': len(successful_topics),
                 'successful_topics': successful_topics,
                 'posts_found': len(posts_list),
                 'output_file': output_file,
                 'posts': posts_list,
-                'config': config.dict(),
-                'topics_used': topics
+                'original_topics': topics
             }
-            
-            logger.info(f"Search completed successfully with topics: {topics}")
+
+            logger.info(f"Search completed successfully with topics: {successful_topics}")
             return result
-            
+
         except Exception as e:
             logger.error(f"Search operation failed: {str(e)}")
             return {
