@@ -1,3 +1,5 @@
+# slack_callback_handler.py
+
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -33,7 +35,7 @@ def verify_slack_signature(request_body: bytes, timestamp: str, signature: str) 
     )
     return hmac.compare_digest(computed_signature, signature)
 
-@router.post("/")
+@router.post("")  # Changed from "/" to "" since the router is already mounted at /slack/interactive
 async def slack_interactive(request: Request):
     """Handle interactive actions from Slack"""
     try:
@@ -46,7 +48,11 @@ async def slack_interactive(request: Request):
         
         # Verify the request
         if not verify_slack_signature(body, timestamp, signature):
-            raise HTTPException(status_code=401, detail="Invalid request signature")
+            logger.error("Invalid Slack signature")
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Invalid request signature"}
+            )
 
         # Parse the form data
         form_data = await request.form()
@@ -67,7 +73,7 @@ async def slack_interactive(request: Request):
                 (block for block in message_blocks if block.get("type") == "header"), 
                 None
             )
-            title = header_block.get("text", {}).get("text", "").replace("🚨 ", "") if header_block else ""
+            title = header_block.get("text", {}).get("text", "").replace("📝 ", "") if header_block else ""
             
             # Extract content from section block
             content_block = next(
@@ -76,7 +82,11 @@ async def slack_interactive(request: Request):
             )
             
             if not content_block:
-                raise HTTPException(status_code=400, detail="Could not find post content")
+                logger.error("Could not find post content")
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "Could not find post content"}
+                )
                 
             content = (
                 content_block.get("text", {})
@@ -98,23 +108,19 @@ async def slack_interactive(request: Request):
                 
                 if result.get("success"):
                     logger.info(f"Post successfully shared by {user}")
-                    return JSONResponse(
-                        content={
-                            "response_type": "in_channel",
-                            "replace_original": True,
-                            "text": f"✅ Post approved and shared successfully by {user}!"
-                        }
-                    )
+                    return JSONResponse(content={
+                        "response_type": "in_channel",
+                        "replace_original": True,
+                        "text": f"✅ Post approved and shared successfully by {user}!"
+                    })
                 else:
                     error_msg = result.get("error", "Unknown error")
                     logger.error(f"Failed to share post: {error_msg}")
-                    return JSONResponse(
-                        content={
-                            "response_type": "in_channel",
-                            "replace_original": True,
-                            "text": f"❌ Error sharing post: {error_msg}"
-                        }
-                    )
+                    return JSONResponse(content={
+                        "response_type": "in_channel",
+                        "replace_original": True,
+                        "text": f"❌ Error sharing post: {error_msg}"
+                    })
                     
             except Exception as e:
                 logger.error(f"Error in share agent: {str(e)}")
@@ -159,31 +165,37 @@ async def slack_interactive(request: Request):
                 # Trigger new workflow execution
                 await scheduler.execute_crew_workflow()
                 
-                return JSONResponse(
-                    content={
-                        "response_type": "in_channel",
-                        "replace_original": True,
-                        "text": f"🔄 Content regeneration initiated by {user}. A new post will be generated and sent for review."
-                    }
-                )
+                return JSONResponse(content={
+                    "response_type": "in_channel",
+                    "replace_original": True,
+                    "text": f"🔄 Content regeneration initiated by {user}. A new post will be generated and sent for review."
+                })
                 
             except Exception as e:
                 logger.error(f"Error during regeneration: {str(e)}")
-                return JSONResponse(
-                    content={
-                        "response_type": "in_channel",
-                        "replace_original": True,
-                        "text": f"❌ Error regenerating content: {str(e)}"
-                    }
-                )
+                return JSONResponse(content={
+                    "response_type": "in_channel",
+                    "replace_original": True,
+                    "text": f"❌ Error regenerating content: {str(e)}"
+                })
             
         else:
-            raise HTTPException(status_code=400, detail="Invalid action")
+            logger.error(f"Invalid action received: {action}")
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Invalid action"}
+            )
             
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON in payload: {e}")
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Invalid JSON payload"}
+        )
         
     except Exception as e:
         logger.error(f"Interactive endpoint error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )

@@ -104,7 +104,11 @@ async def log_requests(request: Request, call_next):
 
 # Register routers
 app.include_router(slack_message_router, prefix="/slack", tags=["slack"])
-app.include_router(slack_callback_router, prefix="/slack/interactive", tags=["slack"])
+app.include_router(
+    slack_callback_router, 
+    prefix="/slack/interactive",  # The prefix already includes the full path
+    tags=["slack"]
+)
 app.include_router(api_router, prefix="/api", tags=["api"])
 
 @app.get("/health")
