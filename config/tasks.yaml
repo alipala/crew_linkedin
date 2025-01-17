@@ -1,15 +1,17 @@
 search_linkedin_posts:
   description: >
-    Search for LinkedIn posts related to {topics} 
-    from the last 3 days using Google search. Focus on posts with high 
-    engagement metrics.
+    Search for LinkedIn posts related to the following topics: {topics}. 
+    Focus on posts from the last 3 days with high engagement metrics.
+    Each topic should be thoroughly researched to find relevant discussions and insights.
   expected_output: >
     A structured dataset containing:
     - Post URLs and content
     - Engagement metrics (reactions, comments, shares)
     - Topic classifications
     - Timestamp information
-  agent: linkedin_scrape_agent
+  agent: linkedin_post_search_agent
+  task_kwargs:
+    topics: "{topics}"
 
 analyze_engagement:
   description: >

@@ -208,6 +208,9 @@ class LinkedInGoogleSearchTool(BaseTool):
             logger.debug(f"Received args: {args}")
             logger.debug(f"Args type: {type(args)}")
             
+            # Validate credentials first
+            self._validate_credentials()
+            
             # Initialize search configuration
             config = SearchConfig(
                 days=args.get('days', 3),
@@ -215,49 +218,32 @@ class LinkedInGoogleSearchTool(BaseTool):
                 results_per_topic=args.get('results_per_topic', 10)
             )
             
-            # Initialize topics list
+            # Extract topics with better error handling
             topics = []
+            if isinstance(args, dict):
+                # Try different ways to get topics
+                if 'topics' in args:
+                    topics = args['topics']
+                elif 'task_kwargs' in args and isinstance(args['task_kwargs'], dict):
+                    topics = args['task_kwargs'].get('topics', [])
+                elif 'task_data' in args and isinstance(args['task_data'], dict):
+                    topics = args['task_data'].get('search_linkedin_posts', {}).get('topics', [])
+                
+                # Convert string to list if necessary
+                if isinstance(topics, str):
+                    topics = [t.strip() for t in topics.split(',')]
+                elif not isinstance(topics, list):
+                    topics = []
             
-            if args:
-                # Try to get topics from task_kwargs first
-                if 'task_kwargs' in args:
-                    task_kwargs_topics = args['task_kwargs'].get('topics')
-                    if task_kwargs_topics:
-                        if isinstance(task_kwargs_topics, list):
-                            topics = task_kwargs_topics
-                        elif isinstance(task_kwargs_topics, str):
-                            topics = [t.strip() for t in task_kwargs_topics.split(',')]
-                
-                # Then try to get topics from direct args
-                elif 'topics' in args:
-                    topics_input = args['topics']
-                    if isinstance(topics_input, list):
-                        topics = topics_input
-                    elif isinstance(topics_input, str):
-                        topics = [t.strip() for t in topics_input.split(',')]
-                
-                # Finally try task_data if no topics found yet
-                elif 'task_data' in args:
-                    task_data = args['task_data'].get('search_linkedin_posts', {})
-                    task_data_topics = task_data.get('topics')
-                    if task_data_topics:
-                        if isinstance(task_data_topics, list):
-                            topics = task_data_topics
-                        elif isinstance(task_data_topics, str):
-                            topics = [t.strip() for t in task_data_topics.split(',')]
-
-            # Clean and validate topics
-            topics = [topic for topic in topics if topic and isinstance(topic, str)]
+            # Ensure topics is a list and clean
+            topics = [t for t in topics if isinstance(t, str) and t.strip()]
             
             if not topics:
                 logger.warning("No valid topics found in arguments, using default topics")
                 topics = self.default_topics
             else:
                 logger.info(f"Using provided topics: {topics}")
-
-            # Validate credentials
-            self._validate_credentials()
-
+                
             all_posts = []
             processed_topics = 0
             successful_topics = []
@@ -269,7 +255,7 @@ class LinkedInGoogleSearchTool(BaseTool):
                     
                 logger.info(f"Searching for topic: {topic}")
                 posts = self._search_linkedin_posts(
-                    topic, 
+                    topic,
                     config.days,
                     config.results_per_topic
                 )

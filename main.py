@@ -54,6 +54,12 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
         logger.debug(f"Creating crew with topics: {topics}")
         logger.debug(f"Topics type: {type(topics)}")
 
+        # Validate and prepare topics
+        if not topics:
+            logger.warning("No topics provided, using defaults from topic manager")
+            topic_manager = TopicManager()
+            topics = topic_manager.get_current_topics()
+
         # Initialize tools
         linkedin_tool = LinkedInGoogleSearchTool()
         serper_tool = SerperDevTool()
@@ -99,12 +105,11 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
             verbose=True
         )
 
-        # Initialize tasks
+        # Initialize tasks with explicit topic handling
         search_task = Task(
             config=config.tasks_config["search_linkedin_posts"],
             agent=linkedin_post_search_agent,
-            tools=[linkedin_tool, serper_tool],
-                        task_kwargs={
+            task_kwargs={
                 'topics': topics
             }
         )
