@@ -55,19 +55,33 @@ class LinkedInGoogleSearchTool(BaseTool):
 
     def _normalize_topics(self, topics_input: Union[str, List[str], Dict[str, Any]]) -> List[str]:
         """Normalize topics input into a list of strings"""
-        if isinstance(topics_input, str):
-            # If it's a string, split by comma or treat as single topic
-            return [t.strip() for t in topics_input.split(',')] if ',' in topics_input else [topics_input.strip()]
-        elif isinstance(topics_input, list):
-            # If it's already a list, ensure all elements are strings
-            return [str(t).strip() for t in topics_input if t]
-        elif isinstance(topics_input, dict):
-            # Try to extract topics from dictionary structure
-            if 'topics' in topics_input:
-                return self._normalize_topics(topics_input['topics'])
-            elif 'task_kwargs' in topics_input and 'topics' in topics_input['task_kwargs']:
-                return self._normalize_topics(topics_input['task_kwargs']['topics'])
-        return []
+        try:
+            if isinstance(topics_input, str):
+                # Remove 'add:' prefix if present and split by comma
+                cleaned_input = topics_input.replace('add:', '').strip()
+                return [t.strip() for t in cleaned_input.split(',')] if ',' in cleaned_input else [cleaned_input]
+                
+            elif isinstance(topics_input, list):
+                # Clean each topic in the list
+                return [
+                    t.replace('add:', '').strip() 
+                    for t in topics_input 
+                    if t and isinstance(t, str)
+                ]
+                
+            elif isinstance(topics_input, dict):
+                # Try to extract topics from dictionary structure
+                if 'topics' in topics_input:
+                    return self._normalize_topics(topics_input['topics'])
+                elif 'task_kwargs' in topics_input and 'topics' in topics_input['task_kwargs']:
+                    return self._normalize_topics(topics_input['task_kwargs']['topics'])
+                    
+            logger.debug(f"Normalized topics input type: {type(topics_input)}")
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error in topic normalization: {str(e)}")
+            return []
 
     def _extract_topics_from_args(self, args: Any) -> List[str]:
         """Extract topics from various input formats"""
@@ -80,7 +94,8 @@ class LinkedInGoogleSearchTool(BaseTool):
                 try:
                     args = json.loads(args)
                 except json.JSONDecodeError:
-                    return [args.strip()]
+                    # Clean and return single topic
+                    return [args.replace('add:', '').strip()]
 
             # Handle dictionary input
             if isinstance(args, dict):

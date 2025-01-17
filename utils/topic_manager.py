@@ -93,10 +93,13 @@ class TopicManager:
     def add_topics(self, new_topics: str) -> Tuple[bool, List[str]]:
         """Add new topics and remove cleared state"""
         try:
+            # Clean the input and remove 'add:' prefix
+            cleaned_input = new_topics.replace('add:', '').strip()
+            
             # Split and clean new topics
             topics_to_add = [
                 topic.strip() 
-                for topic in new_topics.split(',')
+                for topic in cleaned_input.split(',')
                 if topic.strip()
             ]
             
@@ -108,7 +111,7 @@ class TopicManager:
             
             # Save with cleared=False since we're adding new topics
             if self.save_topics(updated_topics, cleared=False):
-                logger.info(f"Successfully added {len(topics_to_add)} new topics")
+                logger.info(f"Successfully added {len(topics_to_add)} new topics: {topics_to_add}")
                 return True, updated_topics
             return False, current_topics
             
