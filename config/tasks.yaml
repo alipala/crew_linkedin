@@ -1,17 +1,31 @@
+# tasks.yaml
 search_linkedin_posts:
   description: >
-    Search for LinkedIn posts related to the following topics: {topics}. 
-    Focus on posts from the last 3 days with high engagement metrics.
-    Each topic should be thoroughly researched to find relevant discussions and insights.
+    Search for LinkedIn posts related to topics and queries:
+    Topics to research: {topics}
+
+    Search Requirements:
+    1. For topic searches (keywords): Find posts directly mentioning these topics
+    2. For query searches (sentences/questions): Extract key concepts
+    3. Focus on high-engagement posts from the last 3 days
+    4. Prioritize detailed analysis and expert insights
+    5. Consider contextual relevance for complex queries
   expected_output: >
     A structured dataset containing:
     - Post URLs and content
-    - Engagement metrics (reactions, comments, shares)
-    - Topic classifications
+    - Engagement metrics
+    - Topic relevance scores
     - Timestamp information
   agent: linkedin_post_search_agent
   task_kwargs:
     topics: "{topics}"
+  input_schema:
+    type: object
+    properties:
+      topics:
+        type: array
+        items:
+          type: string
 
 analyze_engagement:
   description: >

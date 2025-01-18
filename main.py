@@ -105,12 +105,12 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
             verbose=True
         )
 
-        # Initialize tasks with explicit topic handling
         search_task = Task(
             config=config.tasks_config["search_linkedin_posts"],
             agent=linkedin_post_search_agent,
+            tools=[linkedin_tool, serper_tool],
             task_kwargs={
-                'topics': topics
+                'topics': topics if isinstance(topics, list) else [topics]
             }
         )
 
