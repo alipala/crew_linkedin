@@ -6,41 +6,26 @@ search_linkedin_posts:
 
     Search Requirements:
     1. For topic searches (keywords): Find posts directly mentioning these topics
-    2. For query searches (sentences/questions): Extract key concepts and find relevant discussions
+    2. For query searches (sentences/questions): Extract key concepts
     3. Focus on high-engagement posts from the last 3 days
-    4. Prioritize posts that contain detailed analysis or expert insights
+    4. Prioritize detailed analysis and expert insights
     5. Consider contextual relevance for complex queries
   expected_output: >
-    A comprehensive dataset containing:
-    1. Content Analysis:
-       - Post URLs and full content
-       - Topic relevance scoring (0-100%)
-       - Key concepts extracted
-       - Main discussion points
-
-    2. Engagement Metrics:
-       - Reactions (with breakdown if available)
-       - Comments count and quality assessment
-       - Shares and reposts
-       - Overall engagement score
-
-    3. Metadata:
-       - Precise timestamp
-       - Author information (if available)
-       - Post context and thread information
-
-    4. Topic Mapping:
-       - Primary topic alignment
-       - Related topics identified
-       - Search query match confidence
-
+    A structured dataset containing:
+    - Post URLs and content
+    - Engagement metrics
+    - Topic relevance scores
+    - Timestamp information
   agent: linkedin_post_search_agent
   task_kwargs:
     topics: "{topics}"
-    search_config:
-      max_days: 3
-      min_engagement: 50
-      relevance_threshold: 0.7
+  input_schema:
+    type: object
+    properties:
+      topics:
+        type: array
+        items:
+          type: string
 
 analyze_engagement:
   description: >

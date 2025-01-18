@@ -86,29 +86,38 @@ class LinkedInGoogleSearchTool(BaseTool):
     def _extract_topics_from_args(self, args: Any) -> List[str]:
         """Extract topics from various input formats"""
         try:
+            logger.debug(f"Received args: {args}")
+            
             if args is None:
                 return []
 
-            # If args is a string, try to parse it as JSON first
+            # Handle string input
             if isinstance(args, str):
                 try:
                     args = json.loads(args)
                 except json.JSONDecodeError:
                     # Clean and return single topic
-                    return [args.replace('add:', '').strip()]
+                    return [args.strip()]
 
             # Handle dictionary input
             if isinstance(args, dict):
-                # Check all possible paths where topics might be stored
-                possible_paths = [
-                    args.get('topics'),
-                    args.get('task_kwargs', {}).get('topics'),
-                    args.get('task_data', {}).get('search_linkedin_posts', {}).get('topics'),
-                ]
-                
-                for path in possible_paths:
-                    if path:
-                        return self._normalize_topics(path)
+                # Direct topics key
+                if 'topics' in args:
+                    return self._normalize_topics(args['topics'])
+                    
+                # Task kwargs format
+                if 'task_kwargs' in args and 'topics' in args['task_kwargs']:
+                    return self._normalize_topics(args['task_kwargs']['topics'])
+                    
+                # Description format (fallback)
+                if 'description' in args:
+                    return [args['description'].strip()]
+                    
+                # Task data format
+                if 'task_data' in args:
+                    task_data = args['task_data'].get('search_linkedin_posts', {})
+                    if 'topics' in task_data:
+                        return self._normalize_topics(task_data['topics'])
 
             # Handle list input
             if isinstance(args, list):
@@ -119,6 +128,7 @@ class LinkedInGoogleSearchTool(BaseTool):
 
         except Exception as e:
             logger.error(f"Error extracting topics: {str(e)}")
+            logger.error(f"Args: {args}")
             return []
 
     def _search_linkedin_posts(self, topic: str, days: int, max_results: int = 10) -> List[Dict]:
