@@ -239,16 +239,6 @@ class LinkedInGoogleSearchTool(BaseTool):
             return None
 
     def _save_posts_to_json(self, posts: List[Dict], topics: List[str]) -> Optional[str]:
-        """
-        Save scraped posts to JSON file
-        
-        Args:
-            posts (List[Dict]): List of posts to save
-            topics (List[str]): List of topics searched
-            
-        Returns:
-            Optional[str]: Filename where posts were saved, or None if error
-        """
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"linkedin_posts_{timestamp}.json"
@@ -276,15 +266,6 @@ class LinkedInGoogleSearchTool(BaseTool):
             return None
 
     def _run(self, args: Any = None) -> Dict[str, Any]:
-        """
-        Execute LinkedIn Google search with provided arguments
-        
-        Args:
-            args: Various formats of input containing topics and search parameters
-            
-        Returns:
-            Dict[str, Any]: Search results and metadata
-        """
         try:
             # Extract and normalize topics
             topics = self._extract_topics_from_args(args)
