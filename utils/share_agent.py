@@ -133,12 +133,21 @@ class ShareAgent(BaseTool):
                 cleaned_content = re.sub(r':[a-zA-Z_]+:', '', content)
                 
                 # Format LinkedIn post with bold Unicode title and proper paragraph spacing
-                formatted_content = f"{self._to_bold(cleaned_title)}\n\n{cleaned_content}"
+                formatted_content = f"{self._to_bold(cleaned_title)}\n\n"
                 
-                # Split content into paragraphs and rejoin with double newlines
-                # This ensures proper spacing between paragraphs
-                paragraphs = [p.strip() for p in formatted_content.split('\n') if p.strip()]
-                formatted_content = '\n\n'.join(paragraphs)
+                # Process content to handle ** bold markers
+                paragraphs = [p.strip() for p in cleaned_content.split('\n') if p.strip()]
+                for paragraph in paragraphs:
+                    # Check if paragraph contains ** markers
+                    if paragraph.startswith('**') and paragraph.endswith('**'):
+                        # Remove ** markers and convert to Unicode bold
+                        text = paragraph[2:-2].strip()
+                        formatted_content += f"{self._to_bold(text)}\n\n"
+                    else:
+                        formatted_content += f"{paragraph}\n\n"
+                
+                # Remove trailing newlines
+                formatted_content = formatted_content.rstrip()
                 
                 share_request = ShareRequest(
                     content=formatted_content,
