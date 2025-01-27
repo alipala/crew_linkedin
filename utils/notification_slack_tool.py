@@ -1,13 +1,30 @@
-# notification_slack_tool.py
+# utils/notification_slack_tool.py
 from crewai.tools import BaseTool
 from typing import Dict, Any
 from utils.logger import logger
 import requests
 import os
+import re
 
 class NotificationSlackTool(BaseTool):
     name: str = "Slack Notification Tool"
     description: str = "Sends notifications to a Slack channel."
+
+    def _clean_content(self, text: str) -> str:
+        """
+        Clean content by:
+        1. Removing Markdown-style bold markers
+        2. Preserving the text inside them
+        3. Removing any excessive whitespace
+        """
+        # Remove ** markers while keeping the text inside
+        cleaned_text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+        
+        # Split into paragraphs and clean each one
+        paragraphs = [p.strip() for p in cleaned_text.split('\n') if p.strip()]
+        
+        # Rejoin with proper spacing
+        return '\n\n'.join(paragraphs)
 
     def _run(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Send notifications to a Slack channel."""
@@ -24,15 +41,11 @@ class NotificationSlackTool(BaseTool):
                 # Get context either directly or from nested 'context' key
                 context_data = context.get('context', context)
                 post_data = {
-                    'title': context_data.get('title', 'New LinkedIn Post'),
-                    'content': context_data.get('content', 'No content available')
+                    'title': self._clean_content(context_data.get('title', 'New LinkedIn Post')),
+                    'content': self._clean_content(context_data.get('content', 'No content available'))
                 }
 
-            # Format content with proper spacing
-            content_paragraphs = post_data['content'].split('\n')
-            formatted_content = '\n\n'.join(p for p in content_paragraphs if p.strip())
-
-            # Format message for Slack with clear spacing and ensure content isn't truncated
+            # Format message for Slack with clear spacing
             message = {
                 "blocks": [
                     {
@@ -46,10 +59,9 @@ class NotificationSlackTool(BaseTool):
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": f"*Content:*\n{formatted_content}"
+                            "text": f"Content:\n{post_data['content']}"
                         }
                     },
-                    # Add a divider for better visual separation
                     {
                         "type": "divider"
                     },
@@ -79,15 +91,17 @@ class NotificationSlackTool(BaseTool):
                 ]
             }
 
-            # If content is too long for a single message block, split it into multiple blocks
+            # Handle long content by splitting into multiple blocks if needed
             max_block_size = 3000  # Slack's limit per block
-            if len(formatted_content) > max_block_size:
+            if len(post_data['content']) > max_block_size:
                 # Remove the original content block
                 message["blocks"].pop(1)
                 
                 # Split content into chunks
-                content_chunks = [formatted_content[i:i + max_block_size] 
-                                for i in range(0, len(formatted_content), max_block_size)]
+                content_chunks = [
+                    post_data['content'][i:i + max_block_size] 
+                    for i in range(0, len(post_data['content']), max_block_size)
+                ]
                 
                 # Insert content blocks after header
                 for i, chunk in enumerate(content_chunks):
@@ -95,7 +109,7 @@ class NotificationSlackTool(BaseTool):
                         "type": "section",
                         "text": {
                             "type": "mrkdwn",
-                            "text": f"*Content (Part {i+1}/{len(content_chunks)}):*\n{chunk}"
+                            "text": f"Content (Part {i+1}/{len(content_chunks)}):\n{chunk}"
                         }
                     }
                     message["blocks"].insert(i + 1, content_block)
