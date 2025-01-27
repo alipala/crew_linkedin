@@ -51,17 +51,21 @@ conduct_web_search:
 compose_blog_content:
   description: >
     Create and publish a technical blog post based on the web search results to Hashnode:
-    1. Create engaging, well-structured content
+    1. Create engaging, well-structured content between 800-1000 words
     2. Format with proper markdown
     3. Include code examples where relevant
-    4. Generate and add a cover image
-    5. Publish to Hashnode
-    6. Return the published URL
+    4. Break content into clear sections with headers
+    5. Add relevant technical details and explanations
+    6. Include reference links
+    7. Generate and add a cover image
+    8. Publish to Hashnode
+    9. Return the published URL
   expected_output: >
     Published blog post URL and metadata including:
     - Post URL
     - Title
     - Cover image URL
+    - Word count
   agent: blog_agent
   context: [conduct_web_search]
 

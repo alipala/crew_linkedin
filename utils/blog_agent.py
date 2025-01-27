@@ -3,12 +3,13 @@ from typing import Dict, Any, Optional
 import requests
 from config.settings import Config
 from utils.logger import logger
+from utils.blog_content_validator import BlogContentValidator
 import re
 from datetime import datetime
 
 class HashNodePublisher(BaseTool):
     name: str = "HashNode Blog Publisher"
-    description: str = "Creates and publishes technical blog posts on HashNode"
+    description: str = "Creates and publishes technical blog posts on HashNode with length between 800-1000 words"
 
     def __init__(self):
         super().__init__()
@@ -46,14 +47,25 @@ class HashNodePublisher(BaseTool):
         return title, content
 
     def _run(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute blog post publishing"""
+        """Execute blog post publishing with content validation"""
         try:
-            # Extract title and content from various possible formats
+            # Extract title and content
             title, content = self._extract_content(args)
             
             if not title or not content:
                 logger.error(f"Missing title or content. Args received: {args}")
                 raise ValueError("Title and content are required")
+
+            # Validate content length
+            is_valid, validation_result = BlogContentValidator.validate_content(content)
+            if not is_valid:
+                error_msg = validation_result.get("error", "Content validation failed")
+                logger.error(f"Content validation failed: {error_msg}")
+                return {
+                    "status": "error",
+                    "error": error_msg,
+                    "validation_details": validation_result
+                }
 
             # Prepare GraphQL mutation
             mutation = """
@@ -98,18 +110,23 @@ class HashNodePublisher(BaseTool):
             result = response.json()
             if "errors" in result:
                 error_msg = result["errors"][0].get("message", "Unknown error")
+                logger.error(f"GraphQL Error: {error_msg}")
                 raise Exception(f"GraphQL Error: {error_msg}")
 
             post_data = result.get("data", {}).get("publishPost", {}).get("post")
             if not post_data:
                 raise Exception("No post data returned")
 
-            logger.info(f"Successfully published post: {post_data['url']}")
+            # Log success with word count
+            word_count = BlogContentValidator.count_words(content)
+            logger.info(f"Successfully published post: {post_data['url']} with {word_count} words")
+            
             return {
                 "status": "success",
                 "url": post_data["url"],
                 "id": post_data["id"],
-                "title": post_data["title"]
+                "title": post_data["title"],
+                "word_count": word_count
             }
 
         except Exception as e:
