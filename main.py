@@ -1,7 +1,7 @@
 from utils.logger import logger
 import os
 from crewai import Agent, Task, Crew, Process
-from crewai_tools.tools.serper_dev_tool import SerperDevTool
+from crewai_tools import SerperDevTool
 from utils.linkedin_google_search import LinkedInGoogleSearchTool
 from utils.notification_slack_tool import NotificationSlackTool
 from utils.blog_agent import HashNodePublisher
