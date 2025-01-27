@@ -23,7 +23,10 @@ COPY requirements.txt .
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies
+# Install snowflake-connector-python first
+RUN pip install --no-cache-dir snowflake-connector-python
+
+# Then install other Python dependencies
 RUN pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -r requirements.txt
 
