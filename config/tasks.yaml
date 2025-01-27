@@ -48,16 +48,34 @@ conduct_web_search:
     A structured list of references, categorized by source type, relevance, and reliability.
   agent: web_search_agent
 
+compose_blog_content:
+  description: >
+    Create and publish a technical blog post based on the web search results to Hashnode:
+    1. Create engaging, well-structured content
+    2. Format with proper markdown
+    3. Include code examples where relevant
+    4. Generate and add a cover image
+    5. Publish to Hashnode
+    6. Return the published URL
+  expected_output: >
+    Published blog post URL and metadata including:
+    - Post URL
+    - Title
+    - Cover image URL
+  agent: blog_agent
+  context: [conduct_web_search]
+
 create_post:
   description: >
-   Use insights from the "Creative Insights Generator" and references from the "Knowledge Discovery Specialist" 
-    to create a professional LinkedIn post. The content should align with trending topics, audience expectations, 
-    and the platform's best practices. Incorporate multimedia elements like images or graphics to enhance engagement.
+    Using the published blog post URL and content, create an engaging LinkedIn post that:
+    1. Summarizes key insights
+    2. Includes the blog post URL
+    3. Encourages readers to read the full article
+    4. Uses appropriate formatting and spacing
   expected_output: >
-    """A single LinkedIn post in JSON format with two fields:
-            - title: The post title
-            - content: The main post content"""
+    A LinkedIn post in proper format that references and links to the blog post
   agent: post_create_agent
+  context: [compose_blog_content]
 
 notify_user:
   description: >

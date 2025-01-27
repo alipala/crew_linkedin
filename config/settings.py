@@ -77,6 +77,10 @@ class Config:
     SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
     SLACK_BOT_TOKEN = os.getenv('SLACK_BOT_TOKEN')
 
+    # Hashnode settings
+    HASHNODE_API_KEY = os.getenv("HASHNODE_API_KEY")
+    HASHNODE_PUBLICATION_ID = os.getenv("HASHNODE_PUBLICATION_ID")
+
     API_KEY = os.getenv("API_KEY")
     @classmethod
     def validate_config(cls) -> bool:

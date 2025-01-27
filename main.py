@@ -4,6 +4,7 @@ from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 from utils.linkedin_google_search import LinkedInGoogleSearchTool
 from utils.notification_slack_tool import NotificationSlackTool
+from utils.blog_agent import HashNodePublisher
 from utils.models import LinkedInPostContent
 from utils.topic_manager import TopicManager
 import ssl
@@ -64,6 +65,7 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
         linkedin_tool = LinkedInGoogleSearchTool()
         serper_tool = SerperDevTool()
         notification_slack_tool = NotificationSlackTool()
+        hashnode_publisher = HashNodePublisher()
 
         # Initialize agents
         linkedin_post_search_agent = Agent(
@@ -105,6 +107,13 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
             verbose=True
         )
 
+        blog_agent = Agent(
+            config=config.agents_config["blog_agent"],
+            tools=[hashnode_publisher],
+            llm="gpt-4o-mini",
+            verbose=True
+)
+
         search_task = Task(
             config=config.tasks_config["search_linkedin_posts"],
             agent=linkedin_post_search_agent,
@@ -132,10 +141,17 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
             context=[brainstorm_task]
         )
 
+        compose_blog_task = Task(
+            config=config.tasks_config["compose_blog_content"],
+            agent=blog_agent,
+            context=[web_search_task],
+            verbose=True
+            )
+        
         create_post_task = Task(
             config=config.tasks_config["create_post"],
             agent=post_create_agent,
-            context=[web_search_task],
+            context=[compose_blog_task],
             output_pydantic=LinkedInPostContent,
             verbose=True
         )
@@ -154,6 +170,7 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
                 linkedin_analyze_agent,
                 brainstorm_agent,
                 web_search_agent,
+                blog_agent,          
                 post_create_agent,
                 notification_agent
             ],
@@ -162,6 +179,7 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
                 analyze_task,
                 brainstorm_task,
                 web_search_task,
+                compose_blog_task, 
                 create_post_task,
                 notify_user_task
             ],

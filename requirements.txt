@@ -17,4 +17,6 @@ hypercorn
 APScheduler
 pytz
 pytest
+pytest-asyncio
+pytest-mock
 slack-sdk
