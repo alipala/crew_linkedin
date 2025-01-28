@@ -3,7 +3,7 @@ import re
 from utils.logger import logger
 
 class BlogContentValidator:
-    MIN_WORDS = 800
+    MIN_WORDS = 500
     MAX_WORDS = 1000
     
     @staticmethod

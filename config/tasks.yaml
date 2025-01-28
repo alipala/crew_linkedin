@@ -1,21 +1,19 @@
-# tasks.yaml
 search_linkedin_posts:
   description: >
-    Search for LinkedIn posts related to topics and queries:
-    Topics to research: {topics}
-
-    Search Requirements:
-    1. For topic searches (keywords): Find posts directly mentioning these topics
-    2. For query searches (sentences/questions): Extract key concepts
-    3. Focus on high-engagement posts from the last 3 days
-    4. Prioritize detailed analysis and expert insights
-    5. Consider contextual relevance for complex queries
+    Find LinkedIn posts about {topics} that have gone viral (100+ reactions) in the last 4 days.
+    Analyze:
+    - Post structure and formatting
+    - Hook effectiveness
+    - Use of examples/case studies
+    - Call-to-action strength
+    - Comment engagement quality
+    Pay special attention to posts from recognized tech influencers.
   expected_output: >
-    A structured dataset containing:
-    - Post URLs and content
-    - Engagement metrics
-    - Topic relevance scores
-    - Timestamp information
+    Detailed analysis of 5-10 viral posts including:
+    - Post URLs and engagement metrics
+    - Key elements that drove virality
+    - Pattern analysis across successful posts
+    - Specific techniques used in hooks and closes
   agent: linkedin_post_search_agent
   task_kwargs:
     topics: "{topics}"
@@ -29,16 +27,36 @@ search_linkedin_posts:
 
 analyze_engagement:
   description: >
-    Evaluate the engagement metrics of LinkedIn posts collected, focusing on reactions, comments, and shares to prioritize topics for further analysis.
+    Perform deep analysis of the viral posts discovered to understand:
+    - Common elements driving engagement
+    - Writing patterns that resonated
+    - Topic angles that worked best
+    - Timing and audience factors
+    - Response patterns in comments
   expected_output: >
-    An analysis report with ranked topics and detailed engagement breakdowns.
+    Strategic insights including:
+    - Top 3 engagement patterns
+    - Most effective content structures
+    - Best-performing topic angles
+    - Recommended writing style elements
+    - Engagement optimization suggestions
   agent: linkedin_interaction_analyze_agent
 
 generate_ideas:
   description: >
-    Use engagement data to brainstorm and recommend the most promising topics for content creation. Collaborate with LLMs to refine suggestions.
+    Using the engagement analysis, brainstorm content ideas that:
+    - Combine technical depth with broad appeal
+    - Fill identified content gaps
+    - Build on successful patterns
+    - Offer unique perspectives
+    - Have high viral potential
   expected_output: >
-    A curated list of top-performing topics with creative insights for content strategy.
+    List of 5 content ideas with:
+    - Compelling angles
+    - Target audience definition
+    - Key technical elements to cover
+    - Viral potential analysis
+    - Suggested hook approaches
   agent: brainstorm_agent
 
 conduct_web_search:
@@ -51,33 +69,49 @@ conduct_web_search:
 compose_blog_content:
   description: >
     Create and publish a technical blog post based on the web search results to Hashnode:
-    1. Create engaging, well-structured content between 800-1000 words
-    2. Format with proper markdown
-    3. Include code examples where relevant
-    4. Break content into clear sections with headers
-    5. Add relevant technical details and explanations
-    6. Include reference links
-    7. Generate and add a cover image
-    8. Publish to Hashnode
-    9. Return the published URL
+    1. Create engaging, well-structured content between 500-1000 words that hooks readers from the start
+    2. Format with proper markdown, ensuring optimal readability and visual hierarchy
+    3. Include code examples where relevant, with clear explanations and practical use cases
+    4. Break content into clear sections with headers that guide the reader's journey
+    5. Add relevant technical details and explanations that balance depth with accessibility
+    6. Include reference links to authoritative sources that strengthen credibility
+    7. Generate and add a cover image that captures attention and reflects the content
+    8. Structure content for maximum engagement:
+       - Compelling headline that drives clicks
+       - Strong opening hook that establishes value
+       - Clear examples and actionable insights
+       - Strategic subheadings for easy scanning
+       - Engaging conclusion with clear takeaways
+    9. Optimize for both technical accuracy and shareability
+    10. Publish to Hashnode and ensure proper formatting
+    11. Return the published URL and metadata
+
   expected_output: >
     Published blog post URL and metadata including:
     - Post URL
     - Title
     - Cover image URL
     - Word count
+
   agent: blog_agent
   context: [conduct_web_search]
 
 create_post:
   description: >
-    Using the published blog post URL and content, create an engaging LinkedIn post that:
-    1. Summarizes key insights
-    2. Includes the blog post URL
-    3. Encourages readers to read the full article
-    4. Uses appropriate formatting and spacing
+    Transform the blog content into a viral LinkedIn post:
+    - Craft an attention-grabbing hook
+    - Structure for maximum readability
+    - Use strategic spacing and formatting
+    - Include relevant emojis
+    - End with engagement-driving CTA
+    Consider LinkedIn's algorithm preferences and user reading patterns.
   expected_output: >
-    A LinkedIn post in proper format that references and links to the blog post
+    A LinkedIn post that:
+    - Captures attention in first 2 lines
+    - Uses optimal formatting
+    - Includes strategic emojis
+    - Ends with engaging CTA
+    - Links to blog effectively
   agent: post_create_agent
   context: [compose_blog_content]
 

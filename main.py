@@ -71,19 +71,19 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
         linkedin_post_search_agent = Agent(
             config=config.agents_config["linkedin_post_search_agent"],
             tools=[linkedin_tool, serper_tool],
-            llm="gpt-4o-mini",
+            llm="gpt-4o",
             verbose=True
         )
 
         linkedin_analyze_agent = Agent(
             config=config.agents_config["linkedin_interaction_analyze_agent"],
-            llm="gpt-4o-mini",
+            llm="gpt-4o",
             verbose=True
         )
 
         brainstorm_agent = Agent(
             config=config.agents_config["brainstorm_agent"],
-            llm="gpt-4o-mini",
+            llm="gpt-4o",
             verbose=True
         )
 
@@ -96,7 +96,7 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
 
         post_create_agent = Agent(
             config=config.agents_config["post_create_agent"],
-            llm="gpt-4o-mini",
+            llm="gpt-4o",
             verbose=True
         )
 
@@ -110,7 +110,7 @@ def create_crew(config: SetupConfig, topics: Optional[List[str]] = None) -> Crew
         blog_agent = Agent(
             config=config.agents_config["blog_agent"],
             tools=[hashnode_publisher],
-            llm="gpt-4o-mini",
+            llm="gpt-4o",
             verbose=True
 )
 
