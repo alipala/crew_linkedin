@@ -1,6 +1,6 @@
 search_linkedin_posts:
   description: >
-    Find LinkedIn posts about {topics} that have gone viral (1000+ reactions) in the last 4 days.
+    Find LinkedIn posts about {topics} that have gone viral (100+ reactions) in the last 4 days.
     Analyze:
     - Post structure and formatting
     - Hook effectiveness
@@ -69,7 +69,7 @@ conduct_web_search:
 compose_blog_content:
   description: >
     Create and publish a technical blog post based on the web search results to Hashnode:
-    1. Create engaging, well-structured content between 800-1000 words that hooks readers from the start
+    1. Create engaging, well-structured content between 500-1000 words that hooks readers from the start
     2. Format with proper markdown, ensuring optimal readability and visual hierarchy
     3. Include code examples where relevant, with clear explanations and practical use cases
     4. Break content into clear sections with headers that guide the reader's journey

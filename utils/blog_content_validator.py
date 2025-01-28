@@ -3,8 +3,8 @@ import re
 from utils.logger import logger
 
 class BlogContentValidator:
-    MIN_WORDS = 800
-    MAX_WORDS = 1500
+    MIN_WORDS = 500
+    MAX_WORDS = 1000
     
     @staticmethod
     def count_words(text: str) -> int:
