@@ -40,13 +40,13 @@ class Config:
     LINKEDIN_ACCESS_TOKEN = os.getenv('LINKEDIN_ACCESS_TOKEN')
 
     # LinkedIn API Configuration
-    LINKEDIN_ACCESS_TOKEN = os.getenv('LINKEDIN_ACCESS_TOKEN')
     LINKEDIN_PERSON_ID = os.getenv('LINKEDIN_PERSON_ID')
     SLACK_SIGNING_SECRET = os.getenv('SLACK_SIGNING_SECRET')
     
     # Email configuration
-    EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
-    EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+    EMAIL_TO_ADDRESS = os.getenv('EMAIL_TO_ADDRESS')
+    EMAIL_FROM_ADDRESS = os.getenv('EMAIL_FROM_ADDRESS')
+    EMAIL_FROM_PASSWORD = os.getenv('EMAIL_FROM_PASSWORD')
     SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
     SMTP_PORT = int(os.getenv('SMTP_PORT', '587'))
     
@@ -91,8 +91,9 @@ class Config:
         required_configs = [
             ('LINKEDIN_EMAIL', cls.LINKEDIN_EMAIL),
             ('LINKEDIN_PASSWORD', cls.LINKEDIN_PASSWORD),
-            ('EMAIL_ADDRESS', cls.EMAIL_ADDRESS),
-            ('EMAIL_PASSWORD', cls.EMAIL_PASSWORD),
+            ('EMAIL_TO_ADDRESS', cls.EMAIL_TO_ADDRESS),
+            ('EMAIL_FROM_ADDRESS', cls.EMAIL_FROM_ADDRESS),
+            ('EMAIL_FROM_PASSWORD', cls.EMAIL_FROM_PASSWORD),
             ('OPENAI_API_KEY', cls.OPENAI_API_KEY),
             ('SERPER_API_KEY', cls.SERPER_API_KEY),
         ]
@@ -110,8 +111,9 @@ class Config:
         Return email configuration as a dictionary.
         """
         return {
-            'email_address': cls.EMAIL_ADDRESS,
-            'email_password': cls.EMAIL_PASSWORD,
+            'EMAIL_TO_ADDRESS': cls.EMAIL_TO_ADDRESS,
+            'EMAIL_FROM_ADDRESS': cls.EMAIL_FROM_ADDRESS,
+            'EMAIL_FROM_PASSWORd': cls.EMAIL_FROM_PASSWORD,
             'smtp_server': cls.SMTP_SERVER,
             'smtp_port': cls.SMTP_PORT,
         }
@@ -143,7 +145,7 @@ class Config:
     
     @classmethod
     def validate_email_config(cls) -> bool:
-        required = ['EMAIL_ADDRESS', 'EMAIL_PASSWORD', 'SMTP_SERVER', 'SMTP_PORT']
+        required = ['EMAIL_FROM_ADDRESS', 'EMAIL_FROM_PASSWORD', 'SMTP_SERVER', 'SMTP_PORT']
         return all(getattr(cls, attr) for attr in required)
     
     @classmethod
